@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+
+Input/
+Processed/
+Encoded/
+Error/
+ExampleTestingFolder/
