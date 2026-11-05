@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Set;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -73,5 +74,21 @@ public class FileProcessingService {
                 zipInputStream.closeEntry();
             }
         }
+    }
+
+    public void processZipFile(Path zipFile) throws IOException {
+        try{
+            readZipFile(zipFile);
+        } catch (UnsupportedFileTypeException exception){
+            moveToErrorFolder(zipFile);
+            throw exception;
+        }
+    }
+
+    private void moveToErrorFolder(Path zipFile) throws IOException{
+        Path errorFolderPath = Paths.get(errorPath);
+        Path destination = errorFolderPath.resolve(zipFile.getFileName());
+
+        Files.move(zipFile,destination, StandardCopyOption.REPLACE_EXISTING);
     }
 }

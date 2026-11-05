@@ -23,7 +23,7 @@ public class FileProcessingController {
 
         Path zipFile = fileProcessingService.findZipFile();
 
-        fileProcessingService.readZipFile(zipFile);
+        fileProcessingService.processZipFile(zipFile);
 
         return ResponseEntity.ok("ZIP file found " + zipFile.getFileName());
     }
