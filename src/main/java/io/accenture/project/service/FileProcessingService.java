@@ -2,6 +2,7 @@ package io.accenture.project.service;
 
 import io.accenture.project.exception.UnsupportedFileTypeException;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+@Slf4j
 @Service
 public class FileProcessingService {
 
@@ -62,14 +64,14 @@ public class FileProcessingService {
 
                 String fileName = entry.getName().toLowerCase();
 
-                System.out.println("Checking entry: [" + fileName + "]");
+                log.info("Checking entry: [{}]", fileName);
 
                 boolean supportedFile = SUPPORTED_EXTENSIONS.stream().anyMatch((fileName::endsWith));
 
                 if(!supportedFile){
                     throw new UnsupportedFileTypeException(entry.getName());
                 }
-                System.out.println("Valid file found: " + entry.getName());
+                log.info("Valid file found: {}", entry.getName());
 
                 zipInputStream.closeEntry();
             }
@@ -77,10 +79,20 @@ public class FileProcessingService {
     }
 
     public void processZipFile(Path zipFile) throws IOException {
+
+        log.info("Starting processing for ZIP: {}", zipFile.getFileName());
         try{
+
             readZipFile(zipFile);
+            log.info("ZIP validation completed successfully: {}", zipFile.getFileName());
+
         } catch (UnsupportedFileTypeException exception){
+
+            log.warn("Unsupported file found in ZIP: {}", exception.getFileName());
+
             moveToErrorFolder(zipFile);
+            log.info("Moved invalid ZIP to error folder: {}", zipFile.getFileName());
+
             throw exception;
         }
     }
