@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @Service
@@ -86,6 +87,9 @@ public class FileProcessingService {
             readZipFile(zipFile);
             log.info("ZIP validation completed successfully: {}", zipFile.getFileName());
 
+            createProcessedZip(zipFile);
+            log.info("Processed ZIP created successfully: {}", zipFile.getFileName());
+
         } catch (UnsupportedFileTypeException exception){
 
             log.warn("Unsupported file found in ZIP: {}", exception.getFileName());
@@ -102,5 +106,28 @@ public class FileProcessingService {
         Path destination = errorFolderPath.resolve(zipFile.getFileName());
 
         Files.move(zipFile,destination, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private void createProcessedZip(Path zipFile) throws IOException{
+        Path processedFolder = Paths.get(processedPath);
+        Path outputZip = processedFolder.resolve(zipFile.getFileName());
+
+        try(
+            ZipInputStream zipInputStream = new ZipInputStream(Files.newInputStream(zipFile));
+            ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(outputZip));
+        ){
+            ZipEntry entry;
+
+            while((entry = zipInputStream.getNextEntry()) != null){
+                ZipEntry newEntry = new ZipEntry(entry.getName());
+                zipOutputStream.putNextEntry(newEntry);
+
+                zipInputStream.transferTo(zipOutputStream);
+
+                zipOutputStream.closeEntry();
+                zipInputStream.closeEntry();
+            }
+
+        }
     }
 }
