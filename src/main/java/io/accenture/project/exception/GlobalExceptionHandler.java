@@ -8,8 +8,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnsupportedFileTypeException.class)
-    public ResponseEntity<String> handleUnsupportedFileType(
+    public ResponseEntity<ErrorResponse> handleUnsupportedFileType(
             UnsupportedFileTypeException exception){
-        return ResponseEntity.badRequest().body(exception.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                "FAILED",
+                exception.getMessage(),
+                exception.getFileName()
+        );
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 }

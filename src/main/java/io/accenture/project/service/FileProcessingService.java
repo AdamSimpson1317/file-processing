@@ -67,7 +67,7 @@ public class FileProcessingService {
                 boolean supportedFile = SUPPORTED_EXTENSIONS.stream().anyMatch((fileName::endsWith));
 
                 if(!supportedFile){
-                    throw new UnsupportedFileTypeException("Unsupported file type found " + entry.getName());
+                    throw new UnsupportedFileTypeException(entry.getName());
                 }
                 System.out.println("Valid file found: " + entry.getName());
 
