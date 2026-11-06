@@ -244,6 +244,8 @@ public class FileProcessingServiceTest {
 
             ZipEntry entry = zipInputStream.getNextEntry();
 
+            assertNotNull(entry);
+
             String content = new String(zipInputStream.readAllBytes());
 
             assertEquals("document.pdf", entry.getName());
