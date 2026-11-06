@@ -1,0 +1,402 @@
+package io.accenture.project.service;
+
+import io.accenture.project.exception.EmptyZipException;
+import io.accenture.project.exception.UnsupportedFileTypeException;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Base64;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class FileProcessingServiceTest {
+
+    private final FileProcessingService fileProcessingService = new FileProcessingService();
+
+    @TempDir
+    Path tempDir;
+
+
+    private void createTestZip(Path zipPath, String... fileNames) throws IOException{
+        try(ZipOutputStream zipOutputStream =
+                    new ZipOutputStream(Files.newOutputStream(zipPath))){
+            for(String fileName : fileNames){
+                ZipEntry entry = new ZipEntry(fileName);
+                zipOutputStream.putNextEntry(entry);
+
+                zipOutputStream.write(("Test content for " + fileName).getBytes());
+
+                zipOutputStream.closeEntry();
+            }
+        }
+    }
+
+    @Test
+    void shouldAcceptZipContainingSupportedFiles() throws IOException{
+
+        Path zipPath = Files.createTempFile("valid-test", ".zip");
+        createTestZip(zipPath,"document.pdf", "picture.jpg", "photo.jpeg");
+
+        assertDoesNotThrow(() -> fileProcessingService.readZipFile(zipPath));
+    }
+
+    @Test
+    void shouldRejectZipContainingUnsupportedFile() throws IOException{
+
+        Path zipPath = Files.createTempFile("invalid-test", ".zip");
+        createTestZip(zipPath, "document.pdf", "notes.txt");
+
+        assertThrows(UnsupportedFileTypeException.class, () -> fileProcessingService.readZipFile(zipPath));
+    }
+
+    @Test
+    void shouldIncludeUnsupportedFileNameInException() throws IOException {
+
+        Path zipPath = Files.createTempFile("invalid-filename-test", ".zip");
+        createTestZip(zipPath, "document.pdf", "notes.txt");
+
+        UnsupportedFileTypeException exception = assertThrows(
+                UnsupportedFileTypeException.class,
+                () -> fileProcessingService.readZipFile(zipPath)
+        );
+
+        assertEquals("notes.txt", exception.getFileName());
+    }
+
+    @Test
+    void shouldRejectEmptyZip() throws IOException {
+
+        Path zipPath = Files.createTempFile("empty-test", ".zip");
+        createTestZip(zipPath);
+
+        assertThrows(EmptyZipException.class,
+                () -> fileProcessingService.readZipFile(zipPath));
+    }
+
+    @Test
+    void shouldAcceptUppercaseSupportedExtensions() throws IOException {
+
+        Path zipPath = Files.createTempFile("uppercase-test", ".zip");
+
+        createTestZip(
+                zipPath,
+                "DOCUMENT.PDF",
+                "PICTURE.JPG",
+                "PHOTO.JPEG"
+        );
+
+        assertDoesNotThrow(
+                () -> fileProcessingService.readZipFile(zipPath)
+        );
+    }
+
+    @Test
+    void shouldMoveInvalidZipToErrorFolder() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path errorFolder = Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("invalid.zip");
+        createTestZip(zipPath, "document.pdf", "notes.txt");
+
+        assertThrows(
+                UnsupportedFileTypeException.class,
+                () -> fileProcessingService.processZipFile(zipPath)
+        );
+
+        assertTrue(Files.exists(errorFolder.resolve("invalid.zip")));
+    }
+
+    @Test
+    void shouldRemoveInvalidZipFromInputAfterError() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path errorFolder = Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("invalid.zip");
+        createTestZip(zipPath, "document.pdf", "notes.txt");
+
+        assertThrows(
+                UnsupportedFileTypeException.class,
+                () -> fileProcessingService.processZipFile(zipPath)
+        );
+
+        assertFalse(Files.exists(zipPath));
+    }
+
+    @Test
+    void shouldCreateProcessedZip() throws IOException {
+
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = tempDir.resolve("valid.zip");
+        createTestZip(zipPath, "document.pdf", "picture.jpg");
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path processedZip = processedFolder.resolve("valid.zip");
+
+        assertTrue(Files.exists(processedZip));
+    }
+
+    @Test
+    void shouldContainOriginalFilesInProcessedZip() throws IOException {
+
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = tempDir.resolve("valid.zip");
+        createTestZip(zipPath, "document.pdf", "picture.jpg");
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path processedZip = processedFolder.resolve("valid.zip");
+
+        try (ZipInputStream zipInputStream =
+                     new ZipInputStream(Files.newInputStream(processedZip))) {
+
+            Set<String> fileNames = new HashSet<>();
+
+            ZipEntry entry;
+
+            while ((entry = zipInputStream.getNextEntry()) != null) {
+                fileNames.add(entry.getName());
+            }
+
+            assertTrue(fileNames.contains("document.pdf"));
+            assertTrue(fileNames.contains("picture.jpg"));
+        }
+    }
+
+    @Test
+    void shouldPreserveFileContentsInProcessedZip() throws IOException {
+
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = tempDir.resolve("valid.zip");
+        createTestZip(zipPath, "document.pdf");
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path processedZip = processedFolder.resolve("valid.zip");
+
+        try (ZipInputStream zipInputStream =
+                     new ZipInputStream(Files.newInputStream(processedZip))) {
+
+            ZipEntry entry = zipInputStream.getNextEntry();
+
+            String content = new String(zipInputStream.readAllBytes());
+
+            assertEquals("document.pdf", entry.getName());
+            assertEquals("Test content for document.pdf", content);
+        }
+    }
+
+    @Test
+    void shouldCreateEncodedFile() throws IOException {
+
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = tempDir.resolve("valid.zip");
+        createTestZip(zipPath, "document.pdf", "picture.jpg");
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path encodedFile = encodedFolder.resolve("valid.zip.base64");
+
+        assertTrue(Files.exists(encodedFile));
+    }
+
+    @Test
+    void shouldProduceValidBase64() throws IOException {
+
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = tempDir.resolve("valid.zip");
+        createTestZip(zipPath, "document.pdf", "picture.jpg");
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path encodedFile = encodedFolder.resolve("valid.zip.base64");
+
+        byte[] encodedBytes = Files.readAllBytes(encodedFile);
+
+        assertDoesNotThrow(
+                () -> Base64.getDecoder().decode(encodedBytes)
+        );
+    }
+
+    @Test
+    void shouldDecodeToOriginalProcessedZip() throws IOException {
+
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = tempDir.resolve("valid.zip");
+        createTestZip(zipPath, "document.pdf", "picture.jpg");
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path processedZip = processedFolder.resolve("valid.zip");
+        Path encodedFile = encodedFolder.resolve("valid.zip.base64");
+
+        byte[] processedBytes = Files.readAllBytes(processedZip);
+        byte[] encodedBytes = Files.readAllBytes(encodedFile);
+
+        byte[] decodedBytes = Base64.getDecoder().decode(encodedBytes);
+
+        assertArrayEquals(processedBytes, decodedBytes);
+    }
+
+    @Test
+    void shouldNotProcessOrEncodeInvalidZip() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+        Path errorFolder = Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("invalid.zip");
+        createTestZip(zipPath, "document.pdf", "notes.txt");
+
+        assertThrows(
+                UnsupportedFileTypeException.class,
+                () -> fileProcessingService.processZipFile(zipPath)
+        );
+
+        assertFalse(Files.exists(processedFolder.resolve("invalid.zip")));
+
+        assertFalse(Files.exists(encodedFolder.resolve("invalid.zip.base64")));
+    }
+
+    @Test
+    void shouldHandleCorruptZip() throws IOException {
+
+        Path zipPath = tempDir.resolve("corrupt.zip");
+
+        Files.writeString(
+                zipPath,
+                "This is not actually a ZIP file"
+        );
+
+        assertThrows(
+                EmptyZipException.class,
+                () -> fileProcessingService.readZipFile(zipPath)
+        );
+    }
+}

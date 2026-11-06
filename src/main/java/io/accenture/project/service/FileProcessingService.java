@@ -1,5 +1,6 @@
 package io.accenture.project.service;
 
+import io.accenture.project.exception.EmptyZipException;
 import io.accenture.project.exception.UnsupportedFileTypeException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -58,11 +59,14 @@ public class FileProcessingService {
 
     public void readZipFile(Path zipFile) throws IOException {
 
+        boolean hasFiles = false;
         try(ZipInputStream zipInputStream = new ZipInputStream((new FileInputStream(zipFile.toFile())))){
 
             ZipEntry entry;
 
             while((entry= zipInputStream.getNextEntry()) != null){
+
+                hasFiles = true;
 
                 String fileName = entry.getName().toLowerCase();
 
@@ -78,6 +82,10 @@ public class FileProcessingService {
                 zipInputStream.closeEntry();
             }
         }
+        if (!hasFiles) {
+            throw new EmptyZipException("ZIP file is empty");
+        }
+
     }
 
     public void processZipFile(Path zipFile) throws IOException {
