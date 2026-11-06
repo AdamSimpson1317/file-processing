@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Base64;
 import java.util.Set;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -87,8 +88,11 @@ public class FileProcessingService {
             readZipFile(zipFile);
             log.info("ZIP validation completed successfully: {}", zipFile.getFileName());
 
-            createProcessedZip(zipFile);
+            Path processedZip = createProcessedZip(zipFile);
             log.info("Processed ZIP created successfully: {}", zipFile.getFileName());
+
+            encodeProcessedZip(processedZip);
+            log.info("Processed ZIP encoded successfully: {}", processedZip.getFileName());
 
         } catch (UnsupportedFileTypeException exception){
 
@@ -108,7 +112,7 @@ public class FileProcessingService {
         Files.move(zipFile,destination, StandardCopyOption.REPLACE_EXISTING);
     }
 
-    private void createProcessedZip(Path zipFile) throws IOException{
+    private Path createProcessedZip(Path zipFile) throws IOException{
         Path processedFolder = Paths.get(processedPath);
         Path outputZip = processedFolder.resolve(zipFile.getFileName());
 
@@ -127,7 +131,23 @@ public class FileProcessingService {
                 zipOutputStream.closeEntry();
                 zipInputStream.closeEntry();
             }
-
         }
+
+        return outputZip;
+    }
+
+    private void encodeProcessedZip(Path processedZip) throws IOException{
+
+        Path encodedFolder = Paths.get(encodedPath);
+
+        byte[] zipBytes = Files.readAllBytes(processedZip);
+
+        byte[] encodedBytes = Base64.getEncoder().encode(zipBytes);
+
+        Path outputFile = encodedFolder.resolve(
+                processedZip.getFileName().toString() + ".base64"
+        );
+
+        Files.write(outputFile, encodedBytes);
     }
 }
