@@ -215,9 +215,9 @@ public class FileProcessingService {
 
         byte[] encodedBytes = Base64.getEncoder().encode(zipBytes);
 
-        Path outputFile = encodedFolder.resolve(
-                processedZip.getFileName().toString() + ".txt"
-        );
+        String encodedFileName = processedZip.getFileName() + ".txt";
+
+        Path outputFile = getUniquePath(encodedFolder, encodedFileName);
 
         Files.write(outputFile, encodedBytes);
     }
