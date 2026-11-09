@@ -157,13 +157,13 @@ public class FileProcessingService {
 
     private Path createProcessedZip(Path zipFile) throws IOException{
         String originalFileName = zipFile.getFileName().toString();
-        String processedFileName = originalFileName.replace(
-                ".zip",
-                "_processed.zip"
-        );
 
         Path processedFolder = Paths.get(processedPath);
-        Path outputZip = processedFolder.resolve(processedFileName);
+
+        Path outputZip = getUniqueProcessedPath(
+                processedFolder,
+                originalFileName
+        );
 
         try(
             ZipInputStream zipInputStream = new ZipInputStream(Files.newInputStream(zipFile));
@@ -216,5 +216,18 @@ public class FileProcessingService {
         );
 
         Files.write(outputFile, encodedBytes);
+    }
+
+    private Path getUniqueProcessedPath(Path processedFolder, String originalFileName){
+        String baseName = originalFileName.replace(".zip", "_processed");
+        Path outputZip = processedFolder.resolve(baseName + ".zip");
+
+        int counter = 2;
+
+        while(Files.exists(outputZip)){
+            outputZip = processedFolder.resolve(baseName + "_" + counter + ".zip");
+            counter++;
+        }
+        return outputZip;
     }
 }

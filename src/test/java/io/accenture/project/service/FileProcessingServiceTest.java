@@ -552,4 +552,49 @@ public class FileProcessingServiceTest {
                 () -> fileProcessingService.readZipFile(zipPath)
         );
     }
+
+    @Test
+    void shouldCreateUniqueProcessedZipWhenOutputAlreadyExists() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        // Existing processed ZIP
+        Path existingProcessedZip =
+                processedFolder.resolve("valid_processed.zip");
+
+        createTestZip(
+                existingProcessedZip,
+                "existing.pdf"
+        );
+
+        // New input ZIP with the same source filename
+        Path zipPath = inputFolder.resolve("valid.zip");
+
+        createTestZip(
+                zipPath,
+                "document.pdf"
+        );
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path uniqueProcessedZip =
+                processedFolder.resolve("valid_processed_2.zip");
+
+        assertTrue(Files.exists(existingProcessedZip));
+        assertTrue(Files.exists(uniqueProcessedZip));
+    }
 }
