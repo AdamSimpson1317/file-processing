@@ -1,6 +1,7 @@
 package io.accenture.project.service;
 
 import io.accenture.project.exception.EmptyZipException;
+import io.accenture.project.exception.InvalidZipException;
 import io.accenture.project.exception.UnsupportedFileTypeException;
 import io.accenture.project.response.ProcessingResponse;
 import jakarta.annotation.PostConstruct;
@@ -18,9 +19,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Base64;
 import java.util.Set;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
+import java.util.zip.*;
 
 @Slf4j
 @Service
@@ -60,6 +59,8 @@ public class FileProcessingService {
 
     public void readZipFile(Path zipFile) throws IOException {
 
+        validateZipFile(zipFile);
+
         boolean hasFiles = false;
         try(ZipInputStream zipInputStream = new ZipInputStream((new FileInputStream(zipFile.toFile())))){
 
@@ -92,7 +93,14 @@ public class FileProcessingService {
         if (!hasFiles) {
             throw new EmptyZipException("ZIP file is empty");
         }
+    }
 
+    private void validateZipFile(Path zipFile) throws IOException{
+        try(ZipFile zip = new ZipFile(zipFile.toFile())){
+            zip.entries();
+        }catch(ZipException exception){
+            throw new InvalidZipException("Invalid or corrupt ZIP file");
+        }
     }
 
     public ProcessingResponse processZipFile(Path zipFile) throws IOException {
