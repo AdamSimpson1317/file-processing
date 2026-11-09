@@ -276,7 +276,7 @@ public class FileProcessingServiceTest {
 
         fileProcessingService.processZipFile(zipPath);
 
-        Path encodedFile = encodedFolder.resolve("valid.zip.base64");
+        Path encodedFile = encodedFolder.resolve("valid.zip.txt");
 
         assertTrue(Files.exists(encodedFile));
     }
@@ -304,7 +304,7 @@ public class FileProcessingServiceTest {
 
         fileProcessingService.processZipFile(zipPath);
 
-        Path encodedFile = encodedFolder.resolve("valid.zip.base64");
+        Path encodedFile = encodedFolder.resolve("valid.zip.txt");
 
         byte[] encodedBytes = Files.readAllBytes(encodedFile);
 
@@ -337,7 +337,7 @@ public class FileProcessingServiceTest {
         fileProcessingService.processZipFile(zipPath);
 
         Path processedZip = processedFolder.resolve("valid.zip");
-        Path encodedFile = encodedFolder.resolve("valid.zip.base64");
+        Path encodedFile = encodedFolder.resolve("valid.zip.txt");
 
         byte[] processedBytes = Files.readAllBytes(processedZip);
         byte[] encodedBytes = Files.readAllBytes(encodedFile);
@@ -383,7 +383,7 @@ public class FileProcessingServiceTest {
 
         assertFalse(Files.exists(processedFolder.resolve("invalid.zip")));
 
-        assertFalse(Files.exists(encodedFolder.resolve("invalid.zip.base64")));
+        assertFalse(Files.exists(encodedFolder.resolve("invalid.zip.txt")));
     }
 
     @Test

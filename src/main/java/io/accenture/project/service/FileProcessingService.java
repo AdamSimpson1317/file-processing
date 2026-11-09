@@ -159,7 +159,7 @@ public class FileProcessingService {
         byte[] encodedBytes = Base64.getEncoder().encode(zipBytes);
 
         Path outputFile = encodedFolder.resolve(
-                processedZip.getFileName().toString() + ".base64"
+                processedZip.getFileName().toString() + ".txt"
         );
 
         Files.write(outputFile, encodedBytes);
