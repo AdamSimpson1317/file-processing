@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -510,5 +511,27 @@ public class FileProcessingServiceTest {
             assertFalse(entries.contains("documents/"));
             assertTrue(entries.contains("documents/document.pdf"));
         }
+    }
+
+    @Test
+    void shouldThrowFileNotFoundExceptionWhenInputFolderIsEmpty() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "inputPath",
+                inputFolder.toString()
+        );
+
+        FileNotFoundException exception = assertThrows(
+                FileNotFoundException.class,
+                fileProcessingService::findZipFile
+        );
+
+        assertEquals(
+                "No ZIP file found in Input folder",
+                exception.getMessage()
+        );
     }
 }
