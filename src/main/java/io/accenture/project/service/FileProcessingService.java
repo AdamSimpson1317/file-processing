@@ -2,6 +2,7 @@ package io.accenture.project.service;
 
 import io.accenture.project.exception.EmptyZipException;
 import io.accenture.project.exception.InvalidZipException;
+import io.accenture.project.exception.UnsafeZipEntryException;
 import io.accenture.project.exception.UnsupportedFileTypeException;
 import io.accenture.project.response.ProcessingResponse;
 import jakarta.annotation.PostConstruct;
@@ -74,6 +75,8 @@ public class FileProcessingService {
                     continue;
                 }
 
+                validateZipEntryPath(entry);
+
                 hasFiles = true;
 
                 String fileName = entry.getName().toLowerCase();
@@ -100,6 +103,13 @@ public class FileProcessingService {
             zip.entries();
         }catch(ZipException exception){
             throw new InvalidZipException("Invalid or corrupt ZIP file");
+        }
+    }
+
+    private void validateZipEntryPath(ZipEntry entry){
+        Path entryPath = Paths.get(entry.getName()).normalize();
+        if(entryPath.isAbsolute() || entryPath.startsWith("..")){
+            throw new UnsafeZipEntryException(entry.getName());
         }
     }
 

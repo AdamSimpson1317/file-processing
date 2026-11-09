@@ -2,6 +2,7 @@ package io.accenture.project.service;
 
 import io.accenture.project.exception.EmptyZipException;
 import io.accenture.project.exception.InvalidZipException;
+import io.accenture.project.exception.UnsafeZipEntryException;
 import io.accenture.project.exception.UnsupportedFileTypeException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -533,6 +534,22 @@ public class FileProcessingServiceTest {
         assertEquals(
                 "No ZIP file found in Input folder",
                 exception.getMessage()
+        );
+    }
+
+    @Test
+    void shouldRejectUnsafeZipEntryPath() throws IOException{
+
+        Path zipPath = tempDir.resolve("unsafe.zip");
+
+        createTestZip(
+                zipPath,
+                "../../outside.pdf"
+        );
+
+        assertThrows(
+                UnsafeZipEntryException.class,
+                () -> fileProcessingService.readZipFile(zipPath)
         );
     }
 }
