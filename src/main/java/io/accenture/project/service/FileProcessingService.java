@@ -154,6 +154,12 @@ public class FileProcessingService {
             ZipEntry entry;
 
             while((entry = zipInputStream.getNextEntry()) != null){
+
+                if (entry.isDirectory()) {
+                    zipInputStream.closeEntry();
+                    continue;
+                }
+
                 ZipEntry newEntry = new ZipEntry(entry.getName());
                 zipOutputStream.putNextEntry(newEntry);
 

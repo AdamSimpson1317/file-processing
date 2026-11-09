@@ -456,4 +456,59 @@ public class FileProcessingServiceTest {
         assertTrue(Files.exists(movedOriginalZip));
         assertFalse(Files.exists(zipPath));
     }
+
+    @Test
+    void shouldExcludeDirectoryEntriesFromProcessedZip() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("valid.zip");
+
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(Files.newOutputStream(zipPath))) {
+
+            ZipEntry directory = new ZipEntry("documents/");
+            zipOutputStream.putNextEntry(directory);
+            zipOutputStream.closeEntry();
+
+            ZipEntry file = new ZipEntry("documents/document.pdf");
+            zipOutputStream.putNextEntry(file);
+            zipOutputStream.write("Test content".getBytes());
+            zipOutputStream.closeEntry();
+        }
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path processedZip =
+                processedFolder.resolve("valid_processed.zip");
+
+        try (ZipInputStream zipInputStream =
+                     new ZipInputStream(Files.newInputStream(processedZip))) {
+
+            Set<String> entries = new HashSet<>();
+
+            ZipEntry entry;
+
+            while ((entry = zipInputStream.getNextEntry()) != null) {
+                entries.add(entry.getName());
+            }
+
+            assertFalse(entries.contains("documents/"));
+            assertTrue(entries.contains("documents/document.pdf"));
+        }
+    }
 }
