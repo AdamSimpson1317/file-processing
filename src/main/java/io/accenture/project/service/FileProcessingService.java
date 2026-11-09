@@ -108,6 +108,9 @@ public class FileProcessingService {
             encodeProcessedZip(processedZip);
             log.info("Processed ZIP encoded successfully: {}", processedZip.getFileName());
 
+            moveZipToProcessed(zipFile);
+            log.info("Original ZIP moved to Processed folder {}", zipFile.getFileName());
+
         } catch (UnsupportedFileTypeException exception){
 
             log.warn("Unsupported file found in ZIP: {}", exception.getFileName());
@@ -127,8 +130,14 @@ public class FileProcessingService {
     }
 
     private Path createProcessedZip(Path zipFile) throws IOException{
+        String originalFileName = zipFile.getFileName().toString();
+        String processedFileName = originalFileName.replace(
+                ".zip",
+                "_processed.zip"
+        );
+
         Path processedFolder = Paths.get(processedPath);
-        Path outputZip = processedFolder.resolve(zipFile.getFileName());
+        Path outputZip = processedFolder.resolve(processedFileName);
 
         try(
             ZipInputStream zipInputStream = new ZipInputStream(Files.newInputStream(zipFile));
@@ -148,6 +157,18 @@ public class FileProcessingService {
         }
 
         return outputZip;
+    }
+
+    private void moveZipToProcessed(Path zipFile) throws IOException{
+        Path processedFolder = Paths.get(processedPath);
+
+        Path destination = processedFolder.resolve(zipFile.getFileName());
+
+        Files.move(
+                zipFile,
+                destination,
+                StandardCopyOption.REPLACE_EXISTING
+        );
     }
 
     private void encodeProcessedZip(Path processedZip) throws IOException{

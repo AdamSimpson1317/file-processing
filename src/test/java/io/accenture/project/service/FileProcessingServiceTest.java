@@ -168,7 +168,7 @@ public class FileProcessingServiceTest {
 
         fileProcessingService.processZipFile(zipPath);
 
-        Path processedZip = processedFolder.resolve("valid.zip");
+        Path processedZip = processedFolder.resolve("valid_processed.zip");
 
         assertTrue(Files.exists(processedZip));
     }
@@ -196,7 +196,7 @@ public class FileProcessingServiceTest {
 
         fileProcessingService.processZipFile(zipPath);
 
-        Path processedZip = processedFolder.resolve("valid.zip");
+        Path processedZip = processedFolder.resolve("valid_processed.zip");
 
         try (ZipInputStream zipInputStream =
                      new ZipInputStream(Files.newInputStream(processedZip))) {
@@ -237,7 +237,7 @@ public class FileProcessingServiceTest {
 
         fileProcessingService.processZipFile(zipPath);
 
-        Path processedZip = processedFolder.resolve("valid.zip");
+        Path processedZip = processedFolder.resolve("valid_processed.zip");
 
         try (ZipInputStream zipInputStream =
                      new ZipInputStream(Files.newInputStream(processedZip))) {
@@ -276,7 +276,7 @@ public class FileProcessingServiceTest {
 
         fileProcessingService.processZipFile(zipPath);
 
-        Path encodedFile = encodedFolder.resolve("valid.zip.txt");
+        Path encodedFile = encodedFolder.resolve("valid_processed.zip.txt");
 
         assertTrue(Files.exists(encodedFile));
     }
@@ -304,7 +304,7 @@ public class FileProcessingServiceTest {
 
         fileProcessingService.processZipFile(zipPath);
 
-        Path encodedFile = encodedFolder.resolve("valid.zip.txt");
+        Path encodedFile = encodedFolder.resolve("valid_processed.zip.txt");
 
         byte[] encodedBytes = Files.readAllBytes(encodedFile);
 
@@ -336,8 +336,8 @@ public class FileProcessingServiceTest {
 
         fileProcessingService.processZipFile(zipPath);
 
-        Path processedZip = processedFolder.resolve("valid.zip");
-        Path encodedFile = encodedFolder.resolve("valid.zip.txt");
+        Path processedZip = processedFolder.resolve("valid_processed.zip");
+        Path encodedFile = encodedFolder.resolve("valid_processed.zip.txt");
 
         byte[] processedBytes = Files.readAllBytes(processedZip);
         byte[] encodedBytes = Files.readAllBytes(encodedFile);
@@ -420,5 +420,40 @@ public class FileProcessingServiceTest {
         }
 
         assertDoesNotThrow(() -> fileProcessingService.readZipFile(zipPath));
+    }
+
+    @Test
+    void shouldMoveSuccessfulOriginalZipToProcessed() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("valid.zip");
+
+        createTestZip(
+                zipPath,
+                "document.pdf",
+                "picture.jpg"
+        );
+
+        fileProcessingService.processZipFile(zipPath);
+
+        Path movedOriginalZip = processedFolder.resolve("valid.zip");
+
+        assertTrue(Files.exists(movedOriginalZip));
+        assertFalse(Files.exists(zipPath));
     }
 }
