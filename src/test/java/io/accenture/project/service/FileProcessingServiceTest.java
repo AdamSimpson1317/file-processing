@@ -401,4 +401,24 @@ public class FileProcessingServiceTest {
                 () -> fileProcessingService.readZipFile(zipPath)
         );
     }
+
+    @Test
+    void shouldIgnoreDirectoryEntriesInZip() throws IOException{
+        Path zipPath = tempDir.resolve("directory-test.zip");
+
+        try(ZipOutputStream zipOutputStream =
+                new ZipOutputStream(Files.newOutputStream(zipPath))){
+
+            ZipEntry directory = new ZipEntry("documents/");
+            zipOutputStream.putNextEntry(directory);
+            zipOutputStream.closeEntry();
+
+            ZipEntry file = new ZipEntry("documents/document.pdf");
+            zipOutputStream.putNextEntry(file);
+            zipOutputStream.write("Test content".getBytes());
+            zipOutputStream.closeEntry();
+        }
+
+        assertDoesNotThrow(() -> fileProcessingService.readZipFile(zipPath));
+    }
 }

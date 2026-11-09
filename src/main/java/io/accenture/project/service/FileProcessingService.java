@@ -66,6 +66,12 @@ public class FileProcessingService {
 
             while((entry= zipInputStream.getNextEntry()) != null){
 
+                if(entry.isDirectory()){
+                    log.info("Skipping directory entry: {}", entry.getName());
+                    zipInputStream.closeEntry();
+                    continue;
+                }
+
                 hasFiles = true;
 
                 String fileName = entry.getName().toLowerCase();
@@ -126,7 +132,7 @@ public class FileProcessingService {
 
         try(
             ZipInputStream zipInputStream = new ZipInputStream(Files.newInputStream(zipFile));
-            ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(outputZip));
+            ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(outputZip))
         ){
             ZipEntry entry;
 
