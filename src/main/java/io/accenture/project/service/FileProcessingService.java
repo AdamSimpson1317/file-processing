@@ -160,9 +160,14 @@ public class FileProcessingService {
 
         Path processedFolder = Paths.get(processedPath);
 
-        Path outputZip = getUniqueProcessedPath(
+        String processedFileName = originalFileName.replace(
+                ".zip",
+                "_processed.zip"
+        );
+
+        Path outputZip = getUniquePath(
                 processedFolder,
-                originalFileName
+                processedFileName
         );
 
         try(
@@ -194,13 +199,12 @@ public class FileProcessingService {
     private void moveZipToProcessed(Path zipFile) throws IOException{
         Path processedFolder = Paths.get(processedPath);
 
-        Path destination = processedFolder.resolve(zipFile.getFileName());
-
-        Files.move(
-                zipFile,
-                destination,
-                StandardCopyOption.REPLACE_EXISTING
+        Path destination = getUniquePath(
+                processedFolder,
+                zipFile.getFileName().toString()
         );
+
+        Files.move(zipFile, destination);
     }
 
     private void encodeProcessedZip(Path processedZip) throws IOException{
@@ -218,16 +222,21 @@ public class FileProcessingService {
         Files.write(outputFile, encodedBytes);
     }
 
-    private Path getUniqueProcessedPath(Path processedFolder, String originalFileName){
-        String baseName = originalFileName.replace(".zip", "_processed");
-        Path outputZip = processedFolder.resolve(baseName + ".zip");
+    private Path getUniquePath(Path folder, String fileName){
+        Path outputPath = folder.resolve(fileName);
 
         int counter = 2;
 
-        while(Files.exists(outputZip)){
-            outputZip = processedFolder.resolve(baseName + "_" + counter + ".zip");
+        while(Files.exists(outputPath)){
+
+            int extensionIndex = fileName.lastIndexOf(".");
+
+            String name = fileName.substring(0, extensionIndex);
+            String extension = fileName.substring(extensionIndex);
+
+            outputPath = folder.resolve(name + "_" + counter + extension);
             counter++;
         }
-        return outputZip;
+        return outputPath;
     }
 }

@@ -597,4 +597,50 @@ public class FileProcessingServiceTest {
         assertTrue(Files.exists(existingProcessedZip));
         assertTrue(Files.exists(uniqueProcessedZip));
     }
+
+    @Test
+    void shouldCreateUniqueOriginalZipWhenOriginalAlreadyExists() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        // Existing original ZIP already in Processed
+        Path existingOriginalZip =
+                processedFolder.resolve("valid.zip");
+
+        createTestZip(
+                existingOriginalZip,
+                "existing.pdf"
+        );
+
+        // New ZIP arriving in Input with the same name
+        Path newZip =
+                inputFolder.resolve("valid.zip");
+
+        createTestZip(
+                newZip,
+                "document.pdf"
+        );
+
+        fileProcessingService.processZipFile(newZip);
+
+        Path uniqueOriginalZip =
+                processedFolder.resolve("valid_2.zip");
+
+        assertTrue(Files.exists(existingOriginalZip));
+        assertTrue(Files.exists(uniqueOriginalZip));
+    }
 }
