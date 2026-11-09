@@ -1,5 +1,6 @@
 package io.accenture.project.controller;
 
+import io.accenture.project.response.ProcessingResponse;
 import io.accenture.project.service.FileProcessingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,13 +20,13 @@ public class FileProcessingController {
     }
 
     @GetMapping("/find")
-    public ResponseEntity<String> findZip() throws IOException{
+    public ResponseEntity<ProcessingResponse> findZip() throws IOException{
 
         Path zipFile = fileProcessingService.findZipFile();
 
-        fileProcessingService.processZipFile(zipFile);
-
-        return ResponseEntity.ok("ZIP file found " + zipFile.getFileName());
+        ProcessingResponse response =
+                fileProcessingService.processZipFile(zipFile);
+        return ResponseEntity.ok(response);
     }
 
 }

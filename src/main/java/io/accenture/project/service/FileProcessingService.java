@@ -2,6 +2,7 @@ package io.accenture.project.service;
 
 import io.accenture.project.exception.EmptyZipException;
 import io.accenture.project.exception.UnsupportedFileTypeException;
+import io.accenture.project.response.ProcessingResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -94,7 +95,7 @@ public class FileProcessingService {
 
     }
 
-    public void processZipFile(Path zipFile) throws IOException {
+    public ProcessingResponse processZipFile(Path zipFile) throws IOException {
 
         log.info("Starting processing for ZIP: {}", zipFile.getFileName());
         try{
@@ -110,6 +111,13 @@ public class FileProcessingService {
 
             moveZipToProcessed(zipFile);
             log.info("Original ZIP moved to Processed folder {}", zipFile.getFileName());
+
+            return new ProcessingResponse(
+                    "SUCCESS",
+                    zipFile.getFileName().toString(),
+                    processedZip.getFileName().toString(),
+                    processedZip.getFileName() + ".txt"
+            );
 
         } catch (UnsupportedFileTypeException exception){
 
