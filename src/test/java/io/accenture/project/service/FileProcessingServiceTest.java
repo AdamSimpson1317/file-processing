@@ -534,4 +534,34 @@ public class FileProcessingServiceTest {
                 exception.getMessage()
         );
     }
+
+    @Test
+    void shouldMoveEmptyZipToErrorFolder() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path errorFolder = Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("empty.zip");
+
+        createTestZip(zipPath);
+
+        assertThrows(
+                EmptyZipException.class,
+                () -> fileProcessingService.processZipFile(zipPath)
+        );
+
+        assertTrue(
+                Files.exists(errorFolder.resolve("empty.zip"))
+        );
+
+        assertFalse(
+                Files.exists(zipPath)
+        );
+    }
 }

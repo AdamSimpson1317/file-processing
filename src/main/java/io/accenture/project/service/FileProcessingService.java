@@ -127,6 +127,13 @@ public class FileProcessingService {
             log.info("Moved invalid ZIP to error folder: {}", zipFile.getFileName());
 
             throw exception;
+        } catch (EmptyZipException exception) {
+
+            log.warn("Empty ZIP found: {}", zipFile.getFileName());
+
+            moveToErrorFolder(zipFile);
+            log.info("Moved invalid ZIP to error folder: {}", zipFile.getFileName());
+            throw exception;
         }
     }
 
