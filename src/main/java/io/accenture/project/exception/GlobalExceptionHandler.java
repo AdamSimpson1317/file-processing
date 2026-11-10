@@ -32,4 +32,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(errorResponse);
     }
+
+    @ExceptionHandler(EmptyZipException.class)
+    public ResponseEntity<ErrorResponse> handleEmptyZip(EmptyZipException exception){
+        ErrorResponse errorResponse = new ErrorResponse(
+                "FAILED",
+                exception.getMessage(),
+                exception.getFileName()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
 }
