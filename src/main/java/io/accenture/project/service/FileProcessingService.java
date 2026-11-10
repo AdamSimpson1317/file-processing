@@ -90,7 +90,7 @@ public class FileProcessingService {
             }
         }
         if (!hasFiles) {
-            throw new EmptyZipException("ZIP file is empty");
+            throw new EmptyZipException(zipFile.getFileName().toString());
         }
 
     }
