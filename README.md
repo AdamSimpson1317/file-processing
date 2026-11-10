@@ -193,6 +193,19 @@ The endpoint can be tested using Bruno.
 - Processed ZIPs use the `_processed.zip` suffix to distinguish them from their source.
 - JUnit temporary directories keep automated tests isolated from real processing folders.
 
+## Robustness Enhancements
+
+This branch extends the baseline implementation with additional defensive behaviour:
+
+- Distinguishes corrupt ZIP files from valid empty ZIP files.
+- Rejects unsafe ZIP entry paths such as path traversal attempts.
+- Prevents existing original ZIP files from being overwritten.
+- Prevents existing processed ZIP files from being overwritten.
+- Prevents existing encoded output files from being overwritten.
+- Generates incremented filenames when output-name collisions occur.
+- Returns controlled HTTP 400 responses for corrupt ZIPs and unsafe ZIP entries.
+- Includes additional regression and edge-case tests.
+
 ## Branches
 
 ### `master`
