@@ -40,6 +40,31 @@ public class GlobalExceptionHandler {
                 exception.getMessage(),
                 exception.getFileName()
         );
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidZipException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidZip(
+            InvalidZipException exception) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "FAILED",
+                exception.getMessage(),
+                exception.getFileName()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(UnsafeZipEntryException.class)
+    public ResponseEntity<ErrorResponse> handleUnsafeZipEntry(
+            UnsafeZipEntryException exception) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "FAILED",
+                exception.getMessage(),
+                exception.getFileName()
+        );
 
         return ResponseEntity.badRequest().body(errorResponse);
     }

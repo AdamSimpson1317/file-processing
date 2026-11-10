@@ -102,7 +102,7 @@ public class FileProcessingService {
         try(ZipFile zip = new ZipFile(zipFile.toFile())){
             zip.entries();
         }catch(ZipException exception){
-            throw new InvalidZipException("Invalid or corrupt ZIP file");
+            throw new InvalidZipException(zipFile.getFileName().toString());
         }
     }
 
@@ -150,7 +150,7 @@ public class FileProcessingService {
             log.warn("Empty ZIP found: {}", zipFile.getFileName());
 
             moveToErrorFolder(zipFile);
-            log.info("Moved invalid ZIP to error folder: {}", zipFile.getFileName());
+            log.info("Moved empty ZIP to error folder: {}", zipFile.getFileName());
             throw exception;
         }
     }
