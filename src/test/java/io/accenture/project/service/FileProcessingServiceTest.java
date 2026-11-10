@@ -693,4 +693,54 @@ public class FileProcessingServiceTest {
                 Files.readString(existingEncodedFile)
         );
     }
+
+    @Test
+    void shouldIncrementProcessedZipNameWhenMultipleOutputsExist() throws IOException{
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path processedFolder = Files.createDirectory(tempDir.resolve("Processed"));
+        Path encodedFolder = Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        createTestZip(
+                processedFolder.resolve(processedFolder.resolve("valid_processed.zip")),
+                "existing.pdf"
+        );
+
+        createTestZip(
+                processedFolder.resolve(processedFolder.resolve("valid_processed_2.zip")),
+                "existing.pdf"
+        );
+
+        Path zipPath = inputFolder.resolve("valid.zip");
+        createTestZip(zipPath, "document.pdf");
+
+        fileProcessingService.processZipFile(zipPath);
+
+        assertTrue(Files.exists(processedFolder.resolve("valid_processed_3.zip")));
+    }
+
+    @Test
+    void shouldAcceptSafeNestedZipEntryPath() throws IOException{
+
+        Path zipPath = tempDir.resolve("nested-path.zip");
+
+        createTestZip(
+                zipPath,
+                "documents/reports/document.pdf"
+        );
+
+        assertDoesNotThrow(() -> fileProcessingService.readZipFile(zipPath));
+    }
 }
