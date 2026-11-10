@@ -1,6 +1,8 @@
 package io.accenture.project.service;
 
 import io.accenture.project.exception.EmptyZipException;
+import io.accenture.project.exception.InvalidZipException;
+import io.accenture.project.exception.UnsafeZipEntryException;
 import io.accenture.project.exception.UnsupportedFileTypeException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -398,7 +400,7 @@ public class FileProcessingServiceTest {
         );
 
         assertThrows(
-                EmptyZipException.class,
+                InvalidZipException.class,
                 () -> fileProcessingService.readZipFile(zipPath)
         );
     }
