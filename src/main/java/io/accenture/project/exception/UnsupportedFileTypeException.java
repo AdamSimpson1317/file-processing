@@ -2,14 +2,16 @@ package io.accenture.project.exception;
 
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 public class UnsupportedFileTypeException extends RuntimeException {
 
-    private final String fileName;
+    private final List<String> fileNames;
 
-    public UnsupportedFileTypeException(String fileName){
+    public UnsupportedFileTypeException(List<String> fileNames){
         super("Unsupported file type found");
-        this.fileName = fileName;
+        this.fileNames = fileNames;
     }
 
 }

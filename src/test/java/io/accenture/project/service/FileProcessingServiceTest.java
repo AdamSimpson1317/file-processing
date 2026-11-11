@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -72,7 +73,7 @@ public class FileProcessingServiceTest {
                 () -> fileProcessingService.readZipFile(zipPath)
         );
 
-        assertEquals("notes.txt", exception.getFileName());
+        assertEquals(List.of("notes.txt"), exception.getFileNames());
     }
 
     @Test
@@ -770,5 +771,50 @@ public class FileProcessingServiceTest {
         );
 
         assertDoesNotThrow(() -> fileProcessingService.readZipFile(zipPath));
+    }
+
+    @Test
+    void shouldThrowExceptionForUnsupportedFileTypes() throws IOException {
+
+        Path zipFile = tempDir.resolve("test.zip");
+
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(Files.newOutputStream(zipFile))) {
+
+            // Valid PDF
+            zipOutputStream.putNextEntry(new ZipEntry("document.pdf"));
+            zipOutputStream.write("test".getBytes());
+            zipOutputStream.closeEntry();
+
+            // Invalid TXT
+            zipOutputStream.putNextEntry(new ZipEntry("notes.txt"));
+            zipOutputStream.write("test".getBytes());
+            zipOutputStream.closeEntry();
+
+            // Invalid CSV
+            zipOutputStream.putNextEntry(new ZipEntry("data.csv"));
+            zipOutputStream.write("test".getBytes());
+            zipOutputStream.closeEntry();
+
+            // Valid JPG
+            zipOutputStream.putNextEntry(new ZipEntry("photo.jpg"));
+            zipOutputStream.write("test".getBytes());
+            zipOutputStream.closeEntry();
+
+            // Invalid EXE
+            zipOutputStream.putNextEntry(new ZipEntry("program.exe"));
+            zipOutputStream.write("test".getBytes());
+            zipOutputStream.closeEntry();
+        }
+
+        UnsupportedFileTypeException exception = assertThrows(
+                UnsupportedFileTypeException.class,
+                () -> fileProcessingService.readZipFile(zipFile)
+        );
+
+        assertEquals(
+                List.of("notes.txt", "data.csv", "program.exe"),
+                exception.getFileNames()
+        );
     }
 }

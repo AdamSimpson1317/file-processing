@@ -17,7 +17,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 import java.util.zip.*;
@@ -63,6 +65,8 @@ public class FileProcessingService {
         validateZipFile(zipFile);
 
         boolean hasFiles = false;
+        List<String> unsupportedFiles = new ArrayList<>();
+
         try(ZipInputStream zipInputStream = new ZipInputStream((new FileInputStream(zipFile.toFile())))){
 
             ZipEntry entry;
@@ -86,15 +90,19 @@ public class FileProcessingService {
                 boolean supportedFile = SUPPORTED_EXTENSIONS.stream().anyMatch((fileName::endsWith));
 
                 if(!supportedFile){
-                    throw new UnsupportedFileTypeException(entry.getName());
+                    unsupportedFiles.add(entry.getName());
+                } else {
+                    log.info("Valid file found: {}", entry.getName());
                 }
-                log.info("Valid file found: {}", entry.getName());
 
                 zipInputStream.closeEntry();
             }
         }
         if (!hasFiles) {
             throw new EmptyZipException(zipFile.getFileName().toString());
+        }
+        if(!unsupportedFiles.isEmpty()){
+            throw new UnsupportedFileTypeException(unsupportedFiles);
         }
     }
 
@@ -139,7 +147,7 @@ public class FileProcessingService {
 
         } catch (UnsupportedFileTypeException exception){
 
-            log.warn("Unsupported file found in ZIP: {}", exception.getFileName());
+            log.warn("Unsupported files found in ZIP: {}", exception.getFileNames());
 
             moveToErrorFolder(zipFile);
             log.info("Moved invalid ZIP to error folder: {}", zipFile.getFileName());

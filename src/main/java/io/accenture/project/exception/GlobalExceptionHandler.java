@@ -16,7 +16,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 "FAILED",
                 exception.getMessage(),
-                exception.getFileName()
+                String.join(", ", exception.getFileNames())
         );
         return ResponseEntity.badRequest().body(errorResponse);
     }
