@@ -459,6 +459,10 @@ public class FileProcessingServiceTest {
 
         assertTrue(Files.exists(movedOriginalZip));
         assertFalse(Files.exists(zipPath));
+
+        assertDoesNotThrow(() -> Files.delete(movedOriginalZip));
+
+        assertFalse(Files.exists(movedOriginalZip));
     }
 
     @Test
