@@ -817,4 +817,30 @@ public class FileProcessingServiceTest {
                 exception.getFileNames()
         );
     }
+
+    @Test
+    void shouldCreateRequiredFolders() throws IOException {
+
+        Path input = tempDir.resolve("Input");
+        Path processed = tempDir.resolve("Processed");
+        Path encoded = tempDir.resolve("Encoded");
+        Path error = tempDir.resolve("Error");
+
+        ReflectionTestUtils.setField(fileProcessingService, "inputPath", input.toString());
+        ReflectionTestUtils.setField(fileProcessingService, "processedPath", processed.toString());
+        ReflectionTestUtils.setField(fileProcessingService, "encodedPath", encoded.toString());
+        ReflectionTestUtils.setField(fileProcessingService, "errorPath", error.toString());
+
+        assertFalse(Files.exists(input));
+        assertFalse(Files.exists(processed));
+        assertFalse(Files.exists(encoded));
+        assertFalse(Files.exists(error));
+
+        fileProcessingService.createFolder();
+
+        assertTrue(Files.isDirectory(input));
+        assertTrue(Files.isDirectory(processed));
+        assertTrue(Files.isDirectory(encoded));
+        assertTrue(Files.isDirectory(error));
+    }
 }
