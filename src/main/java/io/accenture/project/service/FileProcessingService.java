@@ -51,12 +51,20 @@ public class FileProcessingService {
         Files.createDirectories(Paths.get(errorPath));
     }
 
-    public Path findZipFile() throws IOException {
-        try (Stream<Path> files = Files.list(Paths.get(inputPath))){
-            return files
+    public List<Path> findZipFiles() throws IOException {
+        try (Stream<Path> files = Files.list(Paths.get(inputPath))) {
+
+            List<Path> zipFiles = files
                     .filter(file -> file.toString().endsWith(".zip"))
-                    .findFirst()
-                    .orElseThrow(() -> new FileNotFoundException("No ZIP file found in Input folder"));
+                    .toList();
+
+            if (zipFiles.isEmpty()) {
+                throw new FileNotFoundException(
+                        "No ZIP file found in Input folder"
+                );
+            }
+
+            return zipFiles;
         }
     }
 

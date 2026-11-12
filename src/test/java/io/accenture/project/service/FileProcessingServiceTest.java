@@ -533,7 +533,7 @@ public class FileProcessingServiceTest {
 
         FileNotFoundException exception = assertThrows(
                 FileNotFoundException.class,
-                fileProcessingService::findZipFile
+                fileProcessingService::findZipFiles
         );
 
         assertEquals(
@@ -846,5 +846,42 @@ public class FileProcessingServiceTest {
         assertTrue(Files.isDirectory(processed));
         assertTrue(Files.isDirectory(encoded));
         assertTrue(Files.isDirectory(error));
+    }
+
+    @Test
+    void shouldFindMultipleZipFiles() throws IOException {
+
+        Path inputFolder =
+                Files.createDirectory(tempDir.resolve("Input"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "inputPath",
+                inputFolder.toString()
+        );
+
+        createTestZip(
+                inputFolder.resolve("first.zip"),
+                "first.pdf"
+        );
+
+        createTestZip(
+                inputFolder.resolve("second.zip"),
+                "second.pdf"
+        );
+
+        createTestZip(
+                inputFolder.resolve("third.zip"),
+                "third.pdf"
+        );
+
+        List<Path> zipFiles = fileProcessingService.findZipFiles();
+
+        assertEquals(3, zipFiles.size());
+
+        assertTrue(zipFiles.contains(inputFolder.resolve("first.zip")));
+        assertTrue(zipFiles.contains(inputFolder.resolve("second.zip")));
+        assertTrue(zipFiles.contains(inputFolder.resolve("third.zip")));
+
     }
 }
