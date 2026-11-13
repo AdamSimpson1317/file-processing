@@ -1,5 +1,8 @@
 package io.accenture.project.controller;
 
+import io.accenture.project.exception.EmptyZipException;
+import io.accenture.project.exception.InvalidZipException;
+import io.accenture.project.exception.UnsafeZipEntryException;
 import io.accenture.project.exception.UnsupportedFileTypeException;
 import io.accenture.project.response.BatchProcessingResponse;
 import io.accenture.project.response.ProcessingResponse;
@@ -52,6 +55,33 @@ public class FileProcessingController {
                         null,
                         null,
                         "Unsupported file type found: " + exception.getFileNames()
+                ));
+            } catch (InvalidZipException exception) {
+
+                responses.add(new BatchProcessingResponse(
+                        "FAILED",
+                        zipFile.getFileName().toString(),
+                        null,
+                        null,
+                        exception.getMessage()
+                ));
+            } catch (EmptyZipException exception) {
+
+                responses.add(new BatchProcessingResponse(
+                        "FAILED",
+                        zipFile.getFileName().toString(),
+                        null,
+                        null,
+                        exception.getMessage()
+                ));
+            } catch (UnsafeZipEntryException exception) {
+
+                responses.add(new BatchProcessingResponse(
+                        "FAILED",
+                        zipFile.getFileName().toString(),
+                        null,
+                        null,
+                        exception.getMessage()
                 ));
             }
         }
