@@ -914,4 +914,29 @@ public class FileProcessingServiceTest {
                 Files.exists(errorFolder.resolve("corrupt.zip"))
         );
     }
+
+    @Test
+    void shouldFindZipFileWithUppercaseExtension() throws IOException {
+
+        Path inputFolder =
+                Files.createDirectory(tempDir.resolve("Input"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "inputPath",
+                inputFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("uppercase.ZIP");
+
+        createTestZip(
+                zipPath,
+                "document.pdf"
+        );
+
+        List<Path> zipFiles = fileProcessingService.findZipFiles();
+
+        assertEquals(1, zipFiles.size());
+        assertTrue(zipFiles.contains(zipPath));
+    }
 }

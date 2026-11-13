@@ -55,7 +55,7 @@ public class FileProcessingService {
         try (Stream<Path> files = Files.list(Paths.get(inputPath))) {
 
             List<Path> zipFiles = files
-                    .filter(file -> file.toString().endsWith(".zip"))
+                    .filter(file -> file.toString().toLowerCase().endsWith(".zip"))
                     .toList();
 
             if (zipFiles.isEmpty()) {
