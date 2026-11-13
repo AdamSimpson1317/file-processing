@@ -939,4 +939,35 @@ public class FileProcessingServiceTest {
         assertEquals(1, zipFiles.size());
         assertTrue(zipFiles.contains(zipPath));
     }
+
+    @Test
+    void shouldMoveUnsafeZipToErrorFolder() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path errorFolder = Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("unsafe.zip");
+
+        createTestZip(
+                zipPath,
+                "../../outside.pdf"
+        );
+
+        assertThrows(
+                UnsafeZipEntryException.class,
+                () -> fileProcessingService.processZipFile(zipPath)
+        );
+
+        assertFalse(Files.exists(zipPath));
+
+        assertTrue(
+                Files.exists(errorFolder.resolve("unsafe.zip"))
+        );
+    }
 }

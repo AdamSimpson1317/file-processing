@@ -176,6 +176,14 @@ public class FileProcessingService {
             log.info("Moved invalid ZIP to error folder: {}", zipFile.getFileName());
 
             throw exception;
+        } catch (UnsafeZipEntryException exception) {
+
+            log.warn("Unsafe ZIP entry found: {}", exception.getMessage());
+
+            moveToErrorFolder(zipFile);
+            log.info("Moved unsafe ZIP to error folder: {}", zipFile.getFileName());
+
+            throw exception;
         }
     }
 
