@@ -158,7 +158,7 @@ public class FileProcessingService {
             log.warn("Unsupported files found in ZIP: {}", exception.getFileNames());
 
             moveToErrorFolder(zipFile);
-            log.info("Moved invalid ZIP to error folder: {}", zipFile.getFileName());
+            log.info("Moved invalid ZIP (due to unsupported files) to error folder: {}", zipFile.getFileName());
 
             throw exception;
         } catch (EmptyZipException exception) {
@@ -167,6 +167,14 @@ public class FileProcessingService {
 
             moveToErrorFolder(zipFile);
             log.info("Moved empty ZIP to error folder: {}", zipFile.getFileName());
+            throw exception;
+        } catch (InvalidZipException exception) {
+
+            log.warn("Invalid ZIP found: {}", zipFile.getFileName());
+
+            moveToErrorFolder(zipFile);
+            log.info("Moved invalid ZIP to error folder: {}", zipFile.getFileName());
+
             throw exception;
         }
     }

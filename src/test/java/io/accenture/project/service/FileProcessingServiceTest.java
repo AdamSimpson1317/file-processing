@@ -882,6 +882,36 @@ public class FileProcessingServiceTest {
         assertTrue(zipFiles.contains(inputFolder.resolve("first.zip")));
         assertTrue(zipFiles.contains(inputFolder.resolve("second.zip")));
         assertTrue(zipFiles.contains(inputFolder.resolve("third.zip")));
+    }
 
+    @Test
+    void shouldMoveCorruptZipToErrorFolder() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path errorFolder = Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        Path corruptZip = inputFolder.resolve("corrupt.zip");
+
+        Files.writeString(
+                corruptZip,
+                "This is not actually a ZIP file"
+        );
+
+        assertThrows(
+                InvalidZipException.class,
+                () -> fileProcessingService.processZipFile(corruptZip)
+        );
+
+        assertFalse(Files.exists(corruptZip));
+
+        assertTrue(
+                Files.exists(errorFolder.resolve("corrupt.zip"))
+        );
     }
 }
