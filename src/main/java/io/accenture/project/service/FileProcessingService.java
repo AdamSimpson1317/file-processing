@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -187,11 +186,12 @@ public class FileProcessingService {
         }
     }
 
-    private void moveToErrorFolder(Path zipFile) throws IOException{
+    private void moveToErrorFolder(Path zipFile) throws IOException {
         Path errorFolderPath = Paths.get(errorPath);
-        Path destination = errorFolderPath.resolve(zipFile.getFileName());
 
-        Files.move(zipFile,destination, StandardCopyOption.REPLACE_EXISTING);
+        Path destination = getUniquePath(errorFolderPath, zipFile.getFileName().toString());
+
+        Files.move(zipFile, destination);
     }
 
     private Path createProcessedZip(Path zipFile) throws IOException{

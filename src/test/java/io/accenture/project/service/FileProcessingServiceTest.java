@@ -970,4 +970,36 @@ public class FileProcessingServiceTest {
                 Files.exists(errorFolder.resolve("unsafe.zip"))
         );
     }
+
+    @Test
+    void shouldNotOverwriteExistingZipInErrorFolder() throws IOException {
+
+        Path inputFolder = Files.createDirectory(tempDir.resolve("Input"));
+        Path errorFolder = Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        // Existing ZIP already in Error
+        Path existingZip = errorFolder.resolve("invalid.zip");
+        createTestZip(existingZip, "existing.txt");
+
+        // New invalid ZIP with the same name
+        Path newZip = inputFolder.resolve("invalid.zip");
+        createTestZip(newZip, "new-invalid.txt");
+
+        assertThrows(
+                UnsupportedFileTypeException.class,
+                () -> fileProcessingService.processZipFile(newZip)
+        );
+
+        assertTrue(Files.exists(existingZip));
+
+        assertTrue(
+                Files.exists(errorFolder.resolve("invalid_2.zip"))
+        );
+    }
 }
