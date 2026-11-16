@@ -1,9 +1,6 @@
 package io.accenture.project.service;
 
-import io.accenture.project.exception.EmptyZipException;
-import io.accenture.project.exception.InvalidZipException;
-import io.accenture.project.exception.UnsafeZipEntryException;
-import io.accenture.project.exception.UnsupportedFileTypeException;
+import io.accenture.project.exception.*;
 import io.accenture.project.response.ProcessingResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +38,9 @@ public class FileProcessingService {
 
     @Value("${file-processing.error}")
     private String errorPath;
+
+    @Value("${file-processing.max-entry-size-bytes}")
+    private long maxEntrySizeBytes;
 
     @PostConstruct
     public void createFolder() throws IOException {
@@ -88,6 +88,8 @@ public class FileProcessingService {
 
                 validateZipEntryPath(entry);
 
+                validateEntrySize(zipInputStream, entry);
+
                 hasFiles = true;
 
                 String fileName = entry.getName().toLowerCase();
@@ -125,6 +127,23 @@ public class FileProcessingService {
         Path entryPath = Paths.get(entry.getName()).normalize();
         if(entryPath.isAbsolute() || entryPath.startsWith("..")){
             throw new UnsafeZipEntryException(entry.getName());
+        }
+    }
+
+    private void validateEntrySize(ZipInputStream zipInputStream, ZipEntry entry) throws IOException{
+        long entrySize = 0;
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+
+        while ((bytesRead = zipInputStream.read(buffer)) != -1){
+            entrySize +=bytesRead;
+
+            if(entrySize > maxEntrySizeBytes) {
+                throw new ZipEntryTooLargeException(
+                        entry.getName(),
+                        maxEntrySizeBytes
+                );
+            }
         }
     }
 

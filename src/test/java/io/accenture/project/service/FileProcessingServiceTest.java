@@ -1,9 +1,7 @@
 package io.accenture.project.service;
 
-import io.accenture.project.exception.EmptyZipException;
-import io.accenture.project.exception.InvalidZipException;
-import io.accenture.project.exception.UnsafeZipEntryException;
-import io.accenture.project.exception.UnsupportedFileTypeException;
+import io.accenture.project.exception.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -28,6 +26,15 @@ public class FileProcessingServiceTest {
 
     @TempDir
     Path tempDir;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxEntrySizeBytes",
+                10_485_760L
+        );
+    }
 
 
     private void createTestZip(Path zipPath, String... fileNames) throws IOException{
@@ -1001,5 +1008,36 @@ public class FileProcessingServiceTest {
         assertTrue(
                 Files.exists(errorFolder.resolve("invalid_2.zip"))
         );
+    }
+
+    @Test
+    void shouldRejectZipEntryThatExceedsMaximumSize() throws IOException {
+
+        Path zipPath = tempDir.resolve("oversized-entry.zip");
+
+        byte[] oversizedContent = new byte[2_048];
+
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(Files.newOutputStream(zipPath))) {
+
+            ZipEntry entry = new ZipEntry("large-document.pdf");
+            zipOutputStream.putNextEntry(entry);
+            zipOutputStream.write(oversizedContent);
+            zipOutputStream.closeEntry();
+        }
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxEntrySizeBytes",
+                1_024L
+        );
+
+        ZipEntryTooLargeException exception = assertThrows(
+                ZipEntryTooLargeException.class,
+                () -> fileProcessingService.readZipFile(zipPath)
+        );
+
+        assertTrue(exception.getMessage().contains("large-document.pdf"));
+        assertTrue(exception.getMessage().contains("1024"));
     }
 }
