@@ -45,6 +45,9 @@ public class FileProcessingService {
     @Value("${file-processing.max-entries}")
     private int maxEntries;
 
+    @Value("${file-processing.max-total-uncompressed-size-bytes}")
+    private long maxTotalUncompressedSizeBytes;
+
     @PostConstruct
     public void createFolder() throws IOException {
         Files.createDirectories(Paths.get(inputPath));
@@ -82,6 +85,7 @@ public class FileProcessingService {
             ZipEntry entry;
 
             int entryCount = 0;
+            long totalUncompressedSize = 0;
 
             while((entry= zipInputStream.getNextEntry()) != null){
 
@@ -98,7 +102,15 @@ public class FileProcessingService {
 
                 validateZipEntryPath(entry);
 
-                validateEntrySize(zipInputStream, entry);
+                long entrySize = validateEntrySize(zipInputStream, entry);
+                totalUncompressedSize+=entrySize;
+
+                if(totalUncompressedSize > maxTotalUncompressedSizeBytes){
+                    throw new ZipTooLargeException(
+                            maxTotalUncompressedSizeBytes
+                    );
+                }
+
 
                 hasFiles = true;
 
@@ -140,7 +152,7 @@ public class FileProcessingService {
         }
     }
 
-    private void validateEntrySize(ZipInputStream zipInputStream, ZipEntry entry) throws IOException{
+    private long validateEntrySize(ZipInputStream zipInputStream, ZipEntry entry) throws IOException{
         long entrySize = 0;
         byte[] buffer = new byte[8192];
         int bytesRead;
@@ -155,6 +167,8 @@ public class FileProcessingService {
                 );
             }
         }
+
+        return entrySize;
     }
 
     public ProcessingResponse processZipFile(Path zipFile) throws IOException {

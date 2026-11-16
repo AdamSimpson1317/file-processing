@@ -40,6 +40,12 @@ public class FileProcessingServiceTest {
                 "maxEntries",
                 1000
         );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxTotalUncompressedSizeBytes",
+                104_857_600L
+        );
     }
 
 
@@ -1071,5 +1077,36 @@ public class FileProcessingServiceTest {
         );
 
         assertTrue(exception.getMessage().contains("2"));
+    }
+
+    @Test
+    void shouldRejectZipThatExceedsTotalUncompressedSize() throws IOException {
+
+        Path zipPath = tempDir.resolve("oversized-total.zip");
+
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(Files.newOutputStream(zipPath))) {
+
+            ZipEntry firstEntry = new ZipEntry("first.pdf");
+            zipOutputStream.putNextEntry(firstEntry);
+            zipOutputStream.write(new byte[800]);
+            zipOutputStream.closeEntry();
+
+            ZipEntry secondEntry = new ZipEntry("second.pdf");
+            zipOutputStream.putNextEntry(secondEntry);
+            zipOutputStream.write(new byte[800]);
+            zipOutputStream.closeEntry();
+        }
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxTotalUncompressedSizeBytes",
+                1_000L
+        );
+
+        assertThrows(
+                ZipTooLargeException.class,
+                () -> fileProcessingService.readZipFile(zipPath)
+        );
     }
 }
