@@ -46,6 +46,12 @@ public class FileProcessingServiceTest {
                 "maxTotalUncompressedSizeBytes",
                 104_857_600L
         );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "supportedExtensions",
+                Set.of(".pdf", ".jpg", ".jpeg")
+        );
     }
 
 
@@ -1106,6 +1112,27 @@ public class FileProcessingServiceTest {
 
         assertThrows(
                 ZipTooLargeException.class,
+                () -> fileProcessingService.readZipFile(zipPath)
+        );
+    }
+
+    @Test
+    void shouldAcceptConfiguredFileExtension() throws IOException {
+
+        Path zipPath = tempDir.resolve("configured-extension.zip");
+
+        createTestZip(
+                zipPath,
+                "image.png"
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "supportedExtensions",
+                Set.of(".pdf",".jpg",".jpeg",".png")
+        );
+
+        assertDoesNotThrow(
                 () -> fileProcessingService.readZipFile(zipPath)
         );
     }

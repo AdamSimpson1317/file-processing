@@ -24,8 +24,8 @@ import java.util.zip.*;
 @Service
 public class FileProcessingService {
 
-    private static final Set<String> SUPPORTED_EXTENSIONS =
-            Set.of(".pdf", ".jpg", ".jpeg");
+    @Value("#{'${file-processing.supported-extensions}'.split(',')}")
+    private Set<String> supportedExtensions;
 
     @Value("${file-processing.input}")
     private String inputPath;
@@ -118,7 +118,7 @@ public class FileProcessingService {
 
                 log.info("Checking entry: [{}]", fileName);
 
-                boolean supportedFile = SUPPORTED_EXTENSIONS.stream().anyMatch((fileName::endsWith));
+                boolean supportedFile = supportedExtensions.stream().anyMatch((fileName::endsWith));
 
                 if(!supportedFile){
                     unsupportedFiles.add(entry.getName());
