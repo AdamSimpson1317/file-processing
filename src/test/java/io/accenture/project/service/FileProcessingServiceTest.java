@@ -34,6 +34,12 @@ public class FileProcessingServiceTest {
                 "maxEntrySizeBytes",
                 10_485_760L
         );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxEntries",
+                1000
+        );
     }
 
 
@@ -1039,5 +1045,31 @@ public class FileProcessingServiceTest {
 
         assertTrue(exception.getMessage().contains("large-document.pdf"));
         assertTrue(exception.getMessage().contains("1024"));
+    }
+
+    @Test
+    void shouldRejectZipContainingTooManyEntries() throws IOException {
+
+        Path zipPath = tempDir.resolve("too-many-entries.zip");
+
+        createTestZip(
+                zipPath,
+                "one.pdf",
+                "two.pdf",
+                "three.pdf"
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxEntries",
+                2
+        );
+
+        TooManyZipEntriesException exception = assertThrows(
+                TooManyZipEntriesException.class,
+                () -> fileProcessingService.readZipFile(zipPath)
+        );
+
+        assertTrue(exception.getMessage().contains("2"));
     }
 }

@@ -42,6 +42,9 @@ public class FileProcessingService {
     @Value("${file-processing.max-entry-size-bytes}")
     private long maxEntrySizeBytes;
 
+    @Value("${file-processing.max-entries}")
+    private int maxEntries;
+
     @PostConstruct
     public void createFolder() throws IOException {
         Files.createDirectories(Paths.get(inputPath));
@@ -78,8 +81,15 @@ public class FileProcessingService {
 
             ZipEntry entry;
 
+            int entryCount = 0;
+
             while((entry= zipInputStream.getNextEntry()) != null){
 
+                entryCount++;
+
+                if(entryCount > maxEntries){
+                    throw new TooManyZipEntriesException(maxEntries);
+                }
                 if(entry.isDirectory()){
                     log.info("Skipping directory entry: {}", entry.getName());
                     zipInputStream.closeEntry();
