@@ -1,10 +1,13 @@
 package io.accenture.project.service;
 
 import io.accenture.project.exception.ZipEntryTooLargeException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,19 +15,55 @@ import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-        "file-processing.max-entry-size-bytes=1024"
+        "file-processing.max-entry-size-bytes=1024",
+        "file-processing.input=target/integration-test/Input",
+        "file-processing.processed=target/integration-test/Processed",
+        "file-processing.encoded=target/integration-test/Encoded",
+        "file-processing.error=target/integration-test/Error"
 })
+@AutoConfigureMockMvc
 public class FileProcessingIntegrationTest {
 
     @Autowired
     private FileProcessingService fileProcessingService;
 
+    @Autowired
+    private MockMvc mockMvc;
+
     @TempDir
     Path tempDir;
+
+    private void clearDirectory(Path directory) throws IOException{
+
+        if(!Files.exists(directory)){
+            return;
+        }
+
+        try(var files = Files.list(directory)){
+            files.forEach(file -> {
+                try{
+                    Files.deleteIfExists(file);
+                } catch (IOException exception){
+                    throw new RuntimeException(exception);
+                }
+            });
+        }
+    }
+
+    @BeforeEach
+    void cleanTestDirectories() throws IOException {
+
+        clearDirectory(Path.of("target/integration-test/Input"));
+        clearDirectory(Path.of("target/integration-test/Processed"));
+        clearDirectory(Path.of("target/integration-test/Encoded"));
+        clearDirectory(Path.of("target/integration-test/Error"));
+    }
 
     @Test
     void shouldLoadFileProcessingServiceFromSpringContext(){
@@ -50,4 +89,41 @@ public class FileProcessingIntegrationTest {
                 ZipEntryTooLargeException.class, () -> fileProcessingService.readZipFile(zipPath)
         );
     }
+
+    @Test
+    void shouldProcessZipThroughController() throws Exception{
+
+        Path inputFolder = Path.of("target/integration-test/Input");
+        Path processedFolder = Path.of("target/integration-test/Processed");
+        Path encodedFolder = Path.of("target/integration-test/Encoded");
+
+        Path zipPath = inputFolder.resolve("integration-test.zip");
+
+        try(ZipOutputStream zipOutputStream =
+                new ZipOutputStream(Files.newOutputStream(zipPath))){
+
+            ZipEntry entry = new ZipEntry("document.pdf");
+            zipOutputStream.putNextEntry(entry);
+            zipOutputStream.write("Integration test content".getBytes());
+            zipOutputStream.closeEntry();
+        }
+
+        mockMvc.perform(get("/api/files/find"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("SUCCESS"))
+                .andExpect(jsonPath("$[0].sourceFile").value("integration-test.zip"));
+
+        assertTrue(
+                Files.exists(
+                        processedFolder.resolve("integration-test_processed.zip")
+                )
+        );
+
+        assertTrue(
+                Files.exists(
+                        encodedFolder.resolve("integration-test_processed.zip.txt")
+                )
+        );
+    }
+
 }
