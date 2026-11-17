@@ -10,13 +10,13 @@ import org.springframework.stereotype.Service;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Set;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.zip.*;
 
@@ -182,6 +182,9 @@ public class FileProcessingService {
             Path processedZip = createProcessedZip(zipFile);
             log.info("Processed ZIP created successfully: {}", zipFile.getFileName());
 
+            createChecksumFile(processedZip);
+            log.info("SHA-256 checksum created successfully: {}", processedZip.getFileName());
+
             encodeProcessedZip(processedZip);
             log.info("Processed ZIP encoded successfully: {}", processedZip.getFileName());
 
@@ -320,5 +323,34 @@ public class FileProcessingService {
             counter++;
         }
         return outputPath;
+    }
+
+    public String calculateSha256(Path file) throws IOException{
+        try{
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            try (InputStream inputStream = Files.newInputStream(file)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    digest.update(buffer, 0, bytesRead);
+                }
+            }
+            byte[] hashBytes = digest.digest();
+
+            return HexFormat.of().formatHex(hashBytes);
+
+        } catch (NoSuchAlgorithmException exception){
+            throw new IllegalStateException("SHA-256 algorithm not available", exception);
+        }
+    }
+
+    private void createChecksumFile(Path processedZip) throws IOException{
+
+        String checksum = calculateSha256(processedZip);
+
+        Path checksumFile = processedZip.resolveSibling(processedZip.getFileName() + ".sha256");
+        Files.writeString(checksumFile,checksum);
     }
 }

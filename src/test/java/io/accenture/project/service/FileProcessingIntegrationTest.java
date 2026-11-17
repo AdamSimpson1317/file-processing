@@ -119,6 +119,16 @@ public class FileProcessingIntegrationTest {
                 )
         );
 
+        Path processedZip = processedFolder.resolve("integration-test_processed.zip");
+        Path checksumFile = processedFolder.resolve("integration-test_processed.zip.sha256");
+
+        assertTrue(Files.exists(checksumFile));
+
+        String expectedChecksum = fileProcessingService.calculateSha256(processedZip);
+        String actualChecksum = Files.readString(checksumFile);
+
+        assertEquals(expectedChecksum, actualChecksum);
+
         assertTrue(
                 Files.exists(
                         encodedFolder.resolve("integration-test_processed.zip.txt")
