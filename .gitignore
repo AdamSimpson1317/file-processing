@@ -2,10 +2,8 @@ target/
 .idea/
 *.iml
 
-Input/
-Processed/
-Encoded/
-Error/
+file-processing/
+file-processing-prod/
 ExampleTestingFolder/
 logs/
 ZIPs/

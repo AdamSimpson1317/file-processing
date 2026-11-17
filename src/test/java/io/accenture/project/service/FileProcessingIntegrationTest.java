@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.ByteArrayOutputStream;
@@ -23,12 +24,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@ActiveProfiles("test")
 @SpringBootTest(properties = {
         "file-processing.max-entry-size-bytes=1024",
-        "file-processing.input=target/integration-test/Input",
-        "file-processing.processed=target/integration-test/Processed",
-        "file-processing.encoded=target/integration-test/Encoded",
-        "file-processing.error=target/integration-test/Error"
 })
 @AutoConfigureMockMvc
 public class FileProcessingIntegrationTest {
