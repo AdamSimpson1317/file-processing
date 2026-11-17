@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import io.micrometer.core.instrument.Timer;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -377,5 +378,29 @@ public class FileProcessingService {
 
     private void recordProcessingFailure() {
         meterRegistry.counter("zip.processing.failure").increment();
+    }
+
+    public Path saveUploadedFile(MultipartFile file) throws IOException {
+
+        String originalFilename = file.getOriginalFilename();
+
+        if(originalFilename == null || !originalFilename.toLowerCase().endsWith(".zip")){
+            throw new InvalidUploadFileException(originalFilename);
+        }
+
+        if (file.isEmpty()) {
+            throw new EmptyZipException(originalFilename);
+        }
+
+        Path fileNamePath = Paths.get(originalFilename);
+
+        if(fileNamePath.isAbsolute() || fileNamePath.getNameCount() != 1){
+            throw new InvalidUploadFileException(originalFilename);
+        }
+
+        Path inputFolder = Paths.get(inputPath);
+        Path destination = getUniquePath(inputFolder, originalFilename);
+        file.transferTo(destination);
+        return destination;
     }
 }

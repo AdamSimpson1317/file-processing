@@ -68,4 +68,16 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(errorResponse);
     }
+
+    @ExceptionHandler(InvalidUploadFileException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidUploadFile(InvalidUploadFileException exception){
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "FAILED",
+                exception.getMessage(),
+                exception.getFileName()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
 }

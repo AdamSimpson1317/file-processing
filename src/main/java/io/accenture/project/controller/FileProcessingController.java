@@ -8,9 +8,8 @@ import io.accenture.project.response.BatchProcessingResponse;
 import io.accenture.project.response.ProcessingResponse;
 import io.accenture.project.service.FileProcessingService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -87,5 +86,13 @@ public class FileProcessingController {
         }
 
         return ResponseEntity.ok(responses);
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<String> uploadZip(@RequestParam("file") MultipartFile file) throws IOException {
+
+        Path uploadedFile = fileProcessingService.saveUploadedFile(file);
+        fileProcessingService.processZipFile(uploadedFile);
+        return ResponseEntity.ok("File received");
     }
 }
