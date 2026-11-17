@@ -134,6 +134,11 @@ public class FileProcessingIntegrationTest {
                         encodedFolder.resolve("integration-test_processed.zip.txt")
                 )
         );
+        mockMvc.perform(get("/actuator/metrics/zip.processing.success"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("zip.processing.success"))
+                .andExpect(jsonPath("$.measurements[0].statistic").value("COUNT"))
+                .andExpect(jsonPath("$.measurements[0].value").value(1.0));
     }
 
     @Test
@@ -158,6 +163,13 @@ public class FileProcessingIntegrationTest {
         mockMvc.perform(get("/actuator/health/readiness"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
+    void shouldExposeActuatorMetricsEndpoint() throws Exception {
+        mockMvc.perform(get("/actuator/metrics"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.names").isArray());
     }
 
 }

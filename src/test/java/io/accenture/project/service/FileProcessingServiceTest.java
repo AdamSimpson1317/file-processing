@@ -1,6 +1,7 @@
 package io.accenture.project.service;
 
 import io.accenture.project.exception.*;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -22,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class FileProcessingServiceTest {
 
-    private final FileProcessingService fileProcessingService = new FileProcessingService();
+    private final FileProcessingService fileProcessingService = new FileProcessingService(new SimpleMeterRegistry());
 
     @TempDir
     Path tempDir;

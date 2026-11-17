@@ -2,6 +2,7 @@ package io.accenture.project.service;
 
 import io.accenture.project.exception.*;
 import io.accenture.project.response.ProcessingResponse;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,6 +48,12 @@ public class FileProcessingService {
 
     @Value("${file-processing.max-total-uncompressed-size-bytes}")
     private long maxTotalUncompressedSizeBytes;
+
+    private final MeterRegistry meterRegistry;
+
+    public FileProcessingService(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
 
     @PostConstruct
     public void createFolder() throws IOException {
@@ -190,6 +197,8 @@ public class FileProcessingService {
 
             moveZipToProcessed(zipFile);
             log.info("Original ZIP moved to Processed folder {}", zipFile.getFileName());
+
+            meterRegistry.counter("zip.processing.success").increment();
 
             return new ProcessingResponse(
                     "SUCCESS",
