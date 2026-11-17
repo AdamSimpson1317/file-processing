@@ -136,4 +136,28 @@ public class FileProcessingIntegrationTest {
         );
     }
 
+    @Test
+    void shouldExposeActuatorHealthEndpoint() throws Exception {
+
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
+    void shouldExposeLivenessHealthEndpoint() throws Exception {
+
+        mockMvc.perform(get("/actuator/health/liveness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
+    void shouldExposeReadinessHealthEndpoint() throws Exception {
+
+        mockMvc.perform(get("/actuator/health/readiness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
+
 }
