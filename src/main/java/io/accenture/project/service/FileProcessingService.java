@@ -209,6 +209,8 @@ public class FileProcessingService {
 
         } catch (UnsupportedFileTypeException exception){
 
+            recordProcessingFailure();
+
             log.warn("Unsupported files found in ZIP: {}", exception.getFileNames());
 
             moveToErrorFolder(zipFile);
@@ -217,12 +219,16 @@ public class FileProcessingService {
             throw exception;
         } catch (EmptyZipException exception) {
 
+            recordProcessingFailure();
+
             log.warn("Empty ZIP found: {}", zipFile.getFileName());
 
             moveToErrorFolder(zipFile);
             log.info("Moved empty ZIP to error folder: {}", zipFile.getFileName());
             throw exception;
         } catch (InvalidZipException exception) {
+
+            recordProcessingFailure();
 
             log.warn("Invalid ZIP found: {}", zipFile.getFileName());
 
@@ -231,6 +237,8 @@ public class FileProcessingService {
 
             throw exception;
         } catch (UnsafeZipEntryException exception) {
+
+            recordProcessingFailure();
 
             log.warn("Unsafe ZIP entry found: {}", exception.getMessage());
 
@@ -361,5 +369,9 @@ public class FileProcessingService {
 
         Path checksumFile = processedZip.resolveSibling(processedZip.getFileName() + ".sha256");
         Files.writeString(checksumFile,checksum);
+    }
+
+    private void recordProcessingFailure() {
+        meterRegistry.counter("zip.processing.failure").increment();
     }
 }

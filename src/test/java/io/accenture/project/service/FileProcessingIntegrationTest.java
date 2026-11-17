@@ -172,4 +172,28 @@ public class FileProcessingIntegrationTest {
                 .andExpect(jsonPath("$.names").isArray());
     }
 
+    @Test
+    void shouldRecordFailedZipProcessingMetric() throws Exception {
+
+        Path inputFolder = Path.of("target/integration-test/Input");
+        Path zipPath = inputFolder.resolve("invalid-test.zip");
+
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(Files.newOutputStream(zipPath))) {
+
+            ZipEntry entry = new ZipEntry("unsupported.txt");
+            zipOutputStream.putNextEntry(entry);
+            zipOutputStream.write("Unsupported content".getBytes());
+            zipOutputStream.closeEntry();
+        }
+
+        mockMvc.perform(get("/api/files/find"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/actuator/metrics/zip.processing.failure"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("zip.processing.failure"))
+                .andExpect(jsonPath("$.measurements[0].statistic").value("COUNT"))
+                .andExpect(jsonPath("$.measurements[0].value").value(1.0));
+    }
 }
