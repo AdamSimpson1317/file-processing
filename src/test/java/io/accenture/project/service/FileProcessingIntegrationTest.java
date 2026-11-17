@@ -139,6 +139,12 @@ public class FileProcessingIntegrationTest {
                 .andExpect(jsonPath("$.name").value("zip.processing.success"))
                 .andExpect(jsonPath("$.measurements[0].statistic").value("COUNT"))
                 .andExpect(jsonPath("$.measurements[0].value").value(1.0));
+
+        mockMvc.perform(get("/actuator/metrics/zip.processing.duration"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("zip.processing.duration"))
+                .andExpect(jsonPath("$.measurements[0].statistic").value("COUNT"))
+                .andExpect(jsonPath("$.measurements[0].value").value(1.0));
     }
 
     @Test

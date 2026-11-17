@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import io.micrometer.core.instrument.Timer;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -180,6 +181,7 @@ public class FileProcessingService {
 
     public ProcessingResponse processZipFile(Path zipFile) throws IOException {
 
+        Timer.Sample sample = Timer.start(meterRegistry);
         log.info("Starting processing for ZIP: {}", zipFile.getFileName());
         try{
 
@@ -199,6 +201,8 @@ public class FileProcessingService {
             log.info("Original ZIP moved to Processed folder {}", zipFile.getFileName());
 
             meterRegistry.counter("zip.processing.success").increment();
+
+            sample.stop(meterRegistry.timer("zip.processing.duration"));
 
             return new ProcessingResponse(
                     "SUCCESS",
