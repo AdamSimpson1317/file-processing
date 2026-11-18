@@ -251,6 +251,57 @@ public class FileProcessingService {
             log.info("Moved unsafe ZIP to error folder: {}", zipFile.getFileName());
 
             throw exception;
+        } catch (ZipEntryTooLargeException exception) {
+
+            recordProcessingFailure();
+
+            log.warn(
+                    "ZIP entry exceeds permitted size: {}",
+                    exception.getMessage()
+            );
+
+            moveToErrorFolder(zipFile);
+
+            log.info(
+                    "Moved ZIP with oversized entry to error folder: {}",
+                    zipFile.getFileName()
+            );
+
+            throw exception;
+        } catch (TooManyZipEntriesException exception) {
+
+            recordProcessingFailure();
+
+            log.warn(
+                    "ZIP contains too many entries: {}",
+                    exception.getMessage()
+            );
+
+            moveToErrorFolder(zipFile);
+
+            log.info(
+                    "Moved ZIP with too many entries to error folder: {}",
+                    zipFile.getFileName()
+            );
+
+            throw exception;
+        } catch (ZipTooLargeException exception) {
+
+            recordProcessingFailure();
+
+            log.warn(
+                    "ZIP exceeds maximum total uncompressed size: {}",
+                    exception.getMessage()
+            );
+
+            moveToErrorFolder(zipFile);
+
+            log.info(
+                    "Moved oversized ZIP to error folder: {}",
+                    zipFile.getFileName()
+            );
+
+            throw exception;
         }
     }
 
@@ -267,10 +318,11 @@ public class FileProcessingService {
 
         Path processedFolder = Paths.get(processedPath);
 
-        String processedFileName = originalFileName.replace(
-                ".zip",
-                "_processed.zip"
-        );
+        int extensionIndex = originalFileName.lastIndexOf(".");
+
+        String processedFileName =
+                originalFileName.substring(0, extensionIndex)
+                        + "_processed.zip";
 
         Path outputZip = getUniquePath(
                 processedFolder,

@@ -1,26 +1,21 @@
 # ZIP File Processing Service
 
-A Spring Boot application that reads ZIP files from a configured local input folder, validates their contents, creates a processed ZIP, Base64-encodes the processed output, and handles invalid input through controlled error responses.
+A Spring Boot application for validating and processing ZIP files.
 
-## Prerequisites
-
-- JDK 25
-- Git
-- IntelliJ IDEA or another Java IDE
-- Bruno or another HTTP client for API testing
-
-The project includes the Maven Wrapper, so a separate Maven installation is not required.
+ZIP files can be processed from a configured input folder or uploaded through a REST endpoint. Valid archives are validated, copied into a processed ZIP, SHA-256 checksummed, Base64-encoded, and archived. Invalid ZIPs are moved to an error folder.
 
 ## Technologies
 
 - Java 25
 - Spring Boot
+- Spring MVC
 - Maven
 - JUnit 5
+- Mockito
 - Lombok
-- Java ZIP APIs
-- Java Base64 API
-- Bruno
+- Spring AOP
+- Spring Boot Actuator
+- Micrometer
 
 ## Supported File Types
 
@@ -30,11 +25,15 @@ ZIP archives support:
 - `.jpg`
 - `.jpeg`
 
-File extensions are handled case-insensitively.
+Supported extensions are configurable and are handled case-insensitively.
 
-If an unsupported file type is found, the complete ZIP is rejected and moved to the `Error` folder.
+```properties
+file-processing.supported-extensions=.pdf,.jpg,.jpeg
+```
 
-## Folder Structure
+## Processing Folders
+
+The development profile uses:
 
 ```text
 file-processing/
@@ -44,14 +43,57 @@ file-processing/
 └── Error/
 ```
 
-- `Input` contains ZIP files waiting to be processed.
-- `Processed` contains successful original ZIPs and newly created processed ZIPs.
-- `Encoded` contains Base64-encoded `.txt` output.
-- `Error` contains ZIP files that fail validation.
+- `Input` - ZIP files waiting to be processed
+- `Processed` - successful originals, processed ZIPs, and SHA-256 checksums
+- `Encoded` - Base64-encoded processed ZIPs
+- `Error` - ZIP files that fail validation
+
+The application creates the required folders automatically.
+
+Existing files are not overwritten. If a filename already exists, an incremented name such as `_2` or `_3` is generated.
+
+## Processing Flow
+
+For each ZIP, the application:
+
+1. Validates that the archive is a valid ZIP.
+2. Validates ZIP entry paths and supported file types.
+3. Ignores directory entries.
+4. Enforces configurable ZIP resource limits.
+5. Creates a `_processed.zip`.
+6. Generates a SHA-256 checksum.
+7. Base64-encodes the processed ZIP.
+8. Moves the original successful ZIP to `Processed`.
+
+ZIPs that fail validation are moved to `Error`.
+
+Batch processing allows one ZIP to fail without preventing the remaining ZIPs from being processed.
 
 ## Configuration
 
-Folder paths are configured in `application.properties`:
+Shared configuration is stored in `application.properties`.
+
+Default ZIP resource limits are:
+
+```properties
+file-processing.max-entry-size-bytes=10485760
+file-processing.max-entries=1000
+file-processing.max-total-uncompressed-size-bytes=104857600
+```
+
+These correspond to:
+
+- 10 MB maximum individual ZIP entry size
+- 1,000 maximum ZIP entries
+- 100 MB maximum total uncompressed size
+
+### Spring Profiles
+
+The application separates environment-specific configuration using Spring profiles.
+
+#### Development
+
+`application-dev.properties`:
 
 ```properties
 file-processing.input=./file-processing/Input
@@ -60,158 +102,198 @@ file-processing.encoded=./file-processing/Encoded
 file-processing.error=./file-processing/Error
 ```
 
-The application automatically creates the required folders at startup if they do not already exist.
+#### Test
 
-## Processing Flow
+`application-test.properties` uses isolated folders under:
 
-1. Find a ZIP file in `Input`.
-2. Read and validate its entries.
-3. Accept PDF, JPG and JPEG files.
-4. Ignore directory entries.
-5. Reject the complete ZIP if validation fails.
-6. Create a new `_processed.zip` containing the validated files.
-7. Save the new ZIP in `Processed`.
-8. Base64-encode the processed ZIP.
-9. Save the encoded output as a `.txt` file in `Encoded`.
-10. Move the original successful ZIP to `Processed`.
+```text
+target/integration-test/
+```
 
-ZIP files containing unsupported file types or no files are moved to `Error`.
+#### Production
+
+`application-prod.properties` reads environment-specific values from:
+
+```text
+FILE_PROCESSING_INPUT
+FILE_PROCESSING_PROCESSED
+FILE_PROCESSING_ENCODED
+FILE_PROCESSING_ERROR
+FILE_PROCESSING_MAX_ENTRY_SIZE
+FILE_PROCESSING_MAX_ENTRIES
+FILE_PROCESSING_MAX_TOTAL_SIZE
+```
+
+This keeps production-specific paths and limits outside the source code.
 
 ## API
 
-### Process ZIP
+### Process Input Folder
 
 ```http
 GET /api/files/find
 ```
 
-> **Note:** `GET` is used as defined by the assignment. Calling this endpoint triggers file processing and therefore has side effects. In a production API, an operation that changes state would normally use an appropriate non-GET HTTP method.
+Processes the ZIP files in the configured `Input` folder.
 
-### Success
+Each ZIP receives an independent result, allowing batch processing to continue if one archive fails.
 
-**HTTP 200 OK**
+> `GET` is used as required by the assignment. Because processing changes application state, a production API would normally use an appropriate non-GET HTTP method.
 
-```json
-{
-  "status": "SUCCESS",
-  "sourceFile": "documents.zip",
-  "processedFile": "documents_processed.zip",
-  "encodedFile": "documents_processed.zip.txt"
-}
+### Upload ZIP
+
+```http
+POST /api/files/upload
 ```
 
-### Unsupported File
+Accepts a ZIP using the multipart field:
 
-**HTTP 400 Bad Request**
-
-```json
-{
-  "status": "FAILED",
-  "message": "Unsupported file type found",
-  "fileName": "notes.txt"
-}
+```text
+file
 ```
 
-### Empty ZIP
+The uploaded ZIP is processed through the same validation and processing workflow.
 
-**HTTP 400 Bad Request**
+## Validation and Error Handling
 
-```json
-{
-  "status": "FAILED",
-  "message": "ZIP file is empty",
-  "fileName": "empty.zip"
-}
+Validation covers:
+
+- Unsupported file types
+- Empty ZIP files
+- Invalid or corrupt ZIP files
+- Unsafe ZIP entry paths
+- Invalid or unsafe uploads
+- Oversized ZIP entries
+- Excessive ZIP entry counts
+- Excessive total uncompressed size
+
+Custom exceptions and `@RestControllerAdvice` provide controlled HTTP error responses.
+
+Invalid ZIPs are preserved in the `Error` folder rather than silently deleted.
+
+## SHA-256 and Base64 Output
+
+Successful processing produces:
+
+```text
+Processed/
+├── documents.zip
+├── documents_processed.zip
+└── documents_processed.zip.sha256
+
+Encoded/
+└── documents_processed.zip.txt
 ```
 
-### Empty Input Folder
+The `.sha256` file contains the SHA-256 checksum of the processed ZIP.
 
-**HTTP 404 Not Found**
+The `.txt` file contains the Base64 representation of the processed ZIP.
 
-```json
-{
-  "status": "FAILED",
-  "message": "No ZIP file found in Input folder",
-  "fileName": null
-}
+## Logging
+
+The application uses file-only logging.
+
+Logs are written to:
+
+```text
+logs/file-processing.log
+```
+
+Spring AOP is used to log controller and service method execution and duration without duplicating logging logic across those classes.
+
+## Actuator and Metrics
+
+Spring Boot Actuator exposes:
+
+```text
+/actuator/health
+/actuator/health/liveness
+/actuator/health/readiness
+/actuator/metrics
+```
+
+Micrometer records custom processing metrics:
+
+```text
+zip.processing.success
+zip.processing.failure
+zip.processing.duration
 ```
 
 ## Testing
 
-The project uses JUnit 5.
+The project contains **65 tests** covering unit and integration behaviour, including:
 
-`@TempDir` is used so filesystem tests operate on temporary directories rather than the application's real processing folders.
+- ZIP validation
+- Error handling
+- Batch processing
+- Duplicate filenames
+- Resource limits
+- SHA-256 checksums
+- Base64 encoding
+- Multipart uploads
+- Spring configuration
+- AOP
+- Actuator
+- Micrometer metrics
 
-Tests cover:
+Filesystem unit tests use `@TempDir`, while integration tests use isolated paths under `target`.
 
-- Supported and unsupported file validation
-- Case-insensitive extensions
-- Empty ZIP handling
-- Error-folder handling
-- Successful ZIP movement
-- Processed ZIP creation
-- ZIP entry and file-content preservation
-- Base64 encoding and decoding
-- Directory-entry handling
-- Empty `Input` handling
-
-Run all tests with:
+Run the complete test suite:
 
 ```powershell
-mvnw.cmd test
+.\mvnw.cmd test
+```
+
+Run from a clean build:
+
+```powershell
+.\mvnw.cmd clean test
+```
+
+Expected result:
+
+```text
+65 tests passing
 ```
 
 ## Running the Application
 
-Start the application from the project root:
+Run with the development profile:
 
 ```powershell
-mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Place a ZIP file in:
+Place ZIP files in:
 
 ```text
 file-processing/Input/
 ```
 
-Then call:
+and call:
 
 ```http
 GET /api/files/find
 ```
 
-The endpoint can be tested using Bruno.
+Alternatively, upload a ZIP using:
+
+```http
+POST /api/files/upload
+```
 
 ## Key Design Decisions
 
-- Folder paths are externalised through `application.properties`.
 - Controller and service responsibilities are separated.
-- Custom exceptions provide controlled API error responses.
-- Try-with-resources ensures ZIP and file resources are closed correctly.
-- Original ZIP files are preserved rather than deleted.
-- Processed ZIPs use the `_processed.zip` suffix to distinguish them from their source.
-- JUnit temporary directories keep automated tests isolated from real processing folders.
-
-## Robustness Enhancements
-
-This branch extends the baseline implementation with additional defensive behaviour:
-
-- Distinguishes corrupt ZIP files from valid empty ZIP files.
-- Rejects unsafe ZIP entry paths such as path traversal attempts.
-- Prevents existing original ZIP files from being overwritten.
-- Prevents existing processed ZIP files from being overwritten.
-- Prevents existing encoded output files from being overwritten.
-- Generates incremented filenames when output-name collisions occur.
-- Returns controlled HTTP 400 responses for corrupt ZIPs and unsafe ZIP entries.
-- Includes additional regression and edge-case tests.
-
-## Branches
-
-### `master`
-
-Contains the stable implementation aligned with the core KT requirements.
-
-### `feature/robustness-enhancements`
-
-Contains additional defensive improvements developed separately from the baseline implementation, allowing optional robustness work to be reviewed without changing the core assignment solution.
+- Configuration is externalised and separated using Spring profiles.
+- Production configuration uses environment variables.
+- ZIP resource limits protect against excessive archive contents.
+- Original ZIP files are preserved for traceability.
+- Existing files are never silently overwritten.
+- Invalid ZIPs are retained in `Error`.
+- SHA-256 provides an integrity value for processed archives.
+- `@RestControllerAdvice` centralises API error handling.
+- Spring AOP centralises execution logging.
+- Actuator and Micrometer provide health and processing observability.
+- Unit and integration tests use isolated filesystem locations.

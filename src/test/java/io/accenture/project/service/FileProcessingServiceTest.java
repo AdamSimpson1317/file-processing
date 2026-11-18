@@ -1150,4 +1150,191 @@ public class FileProcessingServiceTest {
                 checksum
         );
     }
+
+    @Test
+    void shouldMoveZipWithOversizedEntryToErrorFolder() throws IOException {
+
+        Path inputFolder =
+                Files.createDirectory(tempDir.resolve("Input"));
+
+        Path errorFolder =
+                Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxEntrySizeBytes",
+                1_024L
+        );
+
+        Path zipPath = inputFolder.resolve("oversized-entry.zip");
+
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(Files.newOutputStream(zipPath))) {
+
+            ZipEntry entry = new ZipEntry("large-document.pdf");
+            zipOutputStream.putNextEntry(entry);
+            zipOutputStream.write(new byte[2_048]);
+            zipOutputStream.closeEntry();
+        }
+
+        assertThrows(
+                ZipEntryTooLargeException.class,
+                () -> fileProcessingService.processZipFile(zipPath)
+        );
+
+        assertFalse(
+                Files.exists(zipPath)
+        );
+
+        assertTrue(
+                Files.exists(
+                        errorFolder.resolve("oversized-entry.zip")
+                )
+        );
+    }
+
+    @Test
+    void shouldMoveZipWithTooManyEntriesToErrorFolder() throws IOException {
+
+        Path inputFolder =
+                Files.createDirectory(tempDir.resolve("Input"));
+
+        Path errorFolder =
+                Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxEntries",
+                2
+        );
+
+        Path zipPath = inputFolder.resolve("too-many-entries.zip");
+
+        createTestZip(
+                zipPath,
+                "one.pdf",
+                "two.pdf",
+                "three.pdf"
+        );
+
+        assertThrows(
+                TooManyZipEntriesException.class,
+                () -> fileProcessingService.processZipFile(zipPath)
+        );
+
+        assertFalse(
+                Files.exists(zipPath)
+        );
+
+        assertTrue(
+                Files.exists(
+                        errorFolder.resolve("too-many-entries.zip")
+                )
+        );
+    }
+
+    @Test
+    void shouldMoveZipExceedingTotalSizeToErrorFolder() throws IOException {
+
+        Path inputFolder =
+                Files.createDirectory(tempDir.resolve("Input"));
+
+        Path errorFolder =
+                Files.createDirectory(tempDir.resolve("Error"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "errorPath",
+                errorFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "maxTotalUncompressedSizeBytes",
+                1_000L
+        );
+
+        Path zipPath = inputFolder.resolve("oversized-total.zip");
+
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(Files.newOutputStream(zipPath))) {
+
+            ZipEntry firstEntry = new ZipEntry("first.pdf");
+            zipOutputStream.putNextEntry(firstEntry);
+            zipOutputStream.write(new byte[800]);
+            zipOutputStream.closeEntry();
+
+            ZipEntry secondEntry = new ZipEntry("second.pdf");
+            zipOutputStream.putNextEntry(secondEntry);
+            zipOutputStream.write(new byte[800]);
+            zipOutputStream.closeEntry();
+        }
+
+        assertThrows(
+                ZipTooLargeException.class,
+                () -> fileProcessingService.processZipFile(zipPath)
+        );
+
+        assertFalse(
+                Files.exists(zipPath)
+        );
+
+        assertTrue(
+                Files.exists(
+                        errorFolder.resolve("oversized-total.zip")
+                )
+        );
+    }
+
+    @Test
+    void shouldCreateProcessedZipForUppercaseZipExtension() throws IOException {
+
+        Path inputFolder =
+                Files.createDirectory(tempDir.resolve("Input"));
+
+        Path processedFolder =
+                Files.createDirectory(tempDir.resolve("Processed"));
+
+        Path encodedFolder =
+                Files.createDirectory(tempDir.resolve("Encoded"));
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "processedPath",
+                processedFolder.toString()
+        );
+
+        ReflectionTestUtils.setField(
+                fileProcessingService,
+                "encodedPath",
+                encodedFolder.toString()
+        );
+
+        Path zipPath = inputFolder.resolve("uppercase.ZIP");
+
+        createTestZip(
+                zipPath,
+                "document.pdf"
+        );
+
+        fileProcessingService.processZipFile(zipPath);
+
+        assertTrue(
+                Files.exists(
+                        processedFolder.resolve("uppercase_processed.zip")
+                )
+        );
+    }
 }

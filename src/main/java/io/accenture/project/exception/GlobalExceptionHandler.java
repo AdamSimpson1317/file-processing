@@ -80,4 +80,21 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(errorResponse);
     }
+
+    @ExceptionHandler({
+            ZipEntryTooLargeException.class,
+            TooManyZipEntriesException.class,
+            ZipTooLargeException.class
+    })
+    public ResponseEntity<ErrorResponse> handleZipResourceLimit(
+            RuntimeException exception) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "FAILED",
+                exception.getMessage(),
+                null
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
 }

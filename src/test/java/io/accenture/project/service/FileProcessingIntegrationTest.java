@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -297,7 +298,7 @@ public class FileProcessingIntegrationTest {
     @Test
     void shouldRejectUploadWithUnsafeFileName() throws Exception {
 
-        Path escapedFile = Path.of("target/intergration-test/malicious.zip");
+        Path escapedFile = Path.of("target/integration-test/malicious.zip");
         Files.deleteIfExists(escapedFile);
 
         MockMultipartFile file = new MockMultipartFile(
@@ -442,5 +443,42 @@ public class FileProcessingIntegrationTest {
         assertFalse(Files.exists(inputFile));
 
         assertTrue(Files.exists(errorFile));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenUploadedZipContainsOversizedEntry() throws Exception {
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(outputStream)) {
+
+            ZipEntry entry = new ZipEntry("large-document.pdf");
+            zipOutputStream.putNextEntry(entry);
+
+            zipOutputStream.write(new byte[2048]);
+
+            zipOutputStream.closeEntry();
+        }
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "oversized-entry.zip",
+                "application/zip",
+                outputStream.toByteArray()
+        );
+
+        mockMvc.perform(
+                        multipart("/api/files/upload")
+                                .file(file)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(
+                        jsonPath("$.message")
+                                .value(containsString(
+                                        "maximum permitted size"
+                                ))
+                );
     }
 }

@@ -1,9 +1,6 @@
 package io.accenture.project.controller;
 
-import io.accenture.project.exception.EmptyZipException;
-import io.accenture.project.exception.InvalidZipException;
-import io.accenture.project.exception.UnsafeZipEntryException;
-import io.accenture.project.exception.UnsupportedFileTypeException;
+import io.accenture.project.exception.*;
 import io.accenture.project.response.BatchProcessingResponse;
 import io.accenture.project.response.ProcessingResponse;
 import io.accenture.project.service.FileProcessingService;
@@ -212,6 +209,64 @@ class FileProcessingControllerTest {
         assertEquals("FAILED", response.getBody().get(1).status());
         assertEquals("SUCCESS", response.getBody().get(2).status());
 
+        verify(fileProcessingService).processZipFile(thirdZip);
+    }
+
+    @Test
+    void shouldContinueProcessingWhenOneZipExceedsResourceLimit() throws Exception {
+
+        FileProcessingService fileProcessingService =
+                mock(FileProcessingService.class);
+
+        FileProcessingController controller =
+                new FileProcessingController(fileProcessingService);
+
+        Path firstZip = Path.of("first.zip");
+        Path oversizedZip = Path.of("oversized.zip");
+        Path thirdZip = Path.of("third.zip");
+
+        when(fileProcessingService.findZipFiles())
+                .thenReturn(List.of(firstZip, oversizedZip, thirdZip));
+
+        when(fileProcessingService.processZipFile(firstZip))
+                .thenReturn(new ProcessingResponse(
+                        "SUCCESS",
+                        "first.zip",
+                        "first_processed.zip",
+                        "first_processed.zip.txt"
+                ));
+
+        when(fileProcessingService.processZipFile(oversizedZip))
+                .thenThrow(new ZipEntryTooLargeException(
+                        "large-document.pdf",
+                        1024
+                ));
+
+        when(fileProcessingService.processZipFile(thirdZip))
+                .thenReturn(new ProcessingResponse(
+                        "SUCCESS",
+                        "third.zip",
+                        "third_processed.zip",
+                        "third_processed.zip.txt"
+                ));
+
+        ResponseEntity<List<BatchProcessingResponse>> response =
+                controller.findZip();
+
+        assertNotNull(response.getBody());
+        assertEquals(3, response.getBody().size());
+
+        assertEquals("SUCCESS", response.getBody().get(0).status());
+        assertEquals("FAILED", response.getBody().get(1).status());
+        assertEquals("SUCCESS", response.getBody().get(2).status());
+
+        assertTrue(
+                response.getBody().get(1).message()
+                        .contains("maximum permitted size")
+        );
+
+        verify(fileProcessingService).processZipFile(firstZip);
+        verify(fileProcessingService).processZipFile(oversizedZip);
         verify(fileProcessingService).processZipFile(thirdZip);
     }
 }
